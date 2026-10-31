@@ -18,10 +18,10 @@ capture date and evidence.
 
 | Source | Role | Ladder step | Status | Doc |
 |---|---|---|---|---|
-| OASA GTFS | timetables | 1 | unverified | [oasa-gtfs.md](./oasa-gtfs.md) |
-| OASA Telematics JSON API | arrivals | 2 | unverified | [oasa-telematics.md](./oasa-telematics.md) |
-| OASA web app (observed) | arrivals, maybe positions | 3 | not started | [oasa-web-observed.md](./oasa-web-observed.md) |
-| OASA official app (static artefacts) | positions | 3 | not started | [oasa-app-observed.md](./oasa-app-observed.md) |
+| OASA GTFS (data.gov.gr) | static model, geometry | 1 | captured, calendar expired | [oasa-gtfs.md](./oasa-gtfs.md) |
+| OASA Telematics API | arrivals, positions, schedules | 2 | captured | [oasa-telematics.md](./oasa-telematics.md) |
+| OASA web app (observed) | arrival polling behaviour | 3 | not needed | [oasa-web-observed.md](./oasa-web-observed.md) |
+| OASA official app (static artefacts) | positions | 3 | not needed | [oasa-app-observed.md](./oasa-app-observed.md) |
 | Map tile provider | map tiles and styles | 1 | unverified | [map-tiles.md](./map-tiles.md) |
 
 Status values: `unverified` (declared, not confirmed), `captured` (documented
@@ -35,7 +35,10 @@ needs re-capture), `blocked` (terms or access prevent use).
 | 2026-10-31 | App never calls OASA directly; all upstream access is behind backend adapters | [ADR 0004](../adr/0004-app-never-calls-upstream.md) |
 | 2026-10-31 | Live positions resolved by explicit three-outcome gate | [ADR 0007](../adr/0007-positions-gate.md) |
 | 2026-10-31 | Map tiles come from a configured provider with attribution | [ADR 0005](../adr/0005-map-tile-provider.md) |
-| _pending_ | _e.g. arrivals adapter targets the Telematics JSON API_ | _section in oasa-telematics.md_ |
+| 2026-10-31 | Live positions come from the public `getBusLocation` endpoint, so the research phase is not needed | [ADR 0007](../adr/0007-positions-gate.md), [oasa-telematics.md](./oasa-telematics.md) |
+| 2026-10-31 | Timetables come from `getSchedLines`, because the GTFS service calendar expired on 2026-10-06 | [oasa-gtfs.md](./oasa-gtfs.md) |
+| 2026-10-31 | The project stays non-commercial: OASA's terms allow personal use only | [oasa-telematics.md](./oasa-telematics.md) |
+| _pending_ | _e.g. arrivals adapter targets the Telematics API_ | _section in oasa-telematics.md_ |
 
 ## Conventions
 

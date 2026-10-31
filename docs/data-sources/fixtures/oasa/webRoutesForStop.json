@@ -1,0 +1,31 @@
+{
+  "sample": [
+    {
+      "RouteCode": "2484",
+      "LineCode": "1151",
+      "hidden": "0",
+      "RouteDescr": "KANIΓΓΟΣ - ΓΚΥΖΗ",
+      "RouteDescrEng": "PLATEIA KANIGGOS - GKYZI",
+      "RouteType": "1",
+      "RouteDistance": "4933.76",
+      "LineID": "021",
+      "LineDescr": "ΠΛΑΤΕΙΑ ΚΑΝΙΓΓΟΣ - ΓΚΥΖH (ΚΥΚΛΙΚΗ)",
+      "LineDescrEng": "PLATEIA KANIGKOS - GKIZI",
+      "MasterLineCode": "9"
+    },
+    {
+      "RouteCode": "4198",
+      "LineCode": "1574",
+      "hidden": "0",
+      "RouteDescr": "*** ΓΚΥΖΗ - KANIΓΓΟΣ ",
+      "RouteDescrEng": "PLATEIA KANIGKOS - GKIZI [FROM GKIZI TO PLATEIA KANIGKOS]",
+      "RouteType": "1",
+      "RouteDistance": "2531.46",
+      "LineID": "021",
+      "LineDescr": "ΠΛΑΤΕΙΑ ΚΑΝΙΓΓΟΣ - ΓΚΥΖH (ΑΠΟ ΓΚΥΖΗ)",
+      "LineDescrEng": "PLATEIA KANIGKOS - GKIZI (FROM GKIZI TO PLATEIA KANIGKOS)",
+      "MasterLineCode": "9"
+    }
+  ],
+  "total": 3
+}

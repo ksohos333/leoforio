@@ -1,0 +1,14 @@
+{
+  "sample": [
+    {
+      "stop_descr": "ΠΛ. ΚΑΝΙΓΓΟΣ",
+      "stop_descr_matrix_eng": "PL. KANNIGOS",
+      "stop_lat": "37.98566",
+      "stop_lng": "23.73113",
+      "stop_heading": "140",
+      "stop_id": "18",
+      "isTerminal": "644049"
+    }
+  ],
+  "total": 1
+}

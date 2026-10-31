@@ -1,0 +1,23 @@
+{
+  "sample": [
+    {
+      "sdc_descr": "ΧΕΙΜΕΡΙΝΟ ΚΑΘΗΜΕΡΙΝΗ",
+      "sdc_descr_eng": "WINTER DAILY",
+      "sdc_code": "54",
+      "": "0"
+    },
+    {
+      "sdc_descr": "ΧΕΙΜΕΡΙΝΟ ΣΑΒΒΑΤΟ",
+      "sdc_descr_eng": "WINTER SATURDAY",
+      "sdc_code": "59",
+      "": "1"
+    },
+    {
+      "sdc_descr": "ΧΕΙΜΕΡΙΝO ΚΥΡΙΑΚΗ",
+      "sdc_descr_eng": "WINTER SUNDAY",
+      "sdc_code": "60",
+      "": "0"
+    }
+  ],
+  "total": 3
+}

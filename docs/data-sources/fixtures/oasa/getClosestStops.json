@@ -1,0 +1,41 @@
+{
+  "sample": [
+    {
+      "StopCode": "60134",
+      "StopID": "060134",
+      "StopDescr": "ΠΛ. ΟΜΟΝΟΙΑΣ",
+      "StopDescrEng": "PL. OMONOIAS",
+      "StopStreet": "ΑΘΗΝΑΣ",
+      "StopStreetEng": null,
+      "StopHeading": "14",
+      "StopLat": "37.9833682",
+      "StopLng": "23.7279031",
+      "distance": "0.0005907121549459193"
+    },
+    {
+      "StopCode": "10184",
+      "StopID": "26",
+      "StopDescr": "ΟΜΟΝΟΙΑ",
+      "StopDescrEng": "OMONOIAS",
+      "StopStreet": null,
+      "StopStreetEng": null,
+      "StopHeading": "193",
+      "StopLat": "37.9832505",
+      "StopLng": "23.7277335",
+      "distance": "0.0005970531802159151"
+    },
+    {
+      "StopCode": "12749",
+      "StopID": "060988",
+      "StopDescr": "ΣΤ. ΟΜΟΝΟΙΑ",
+      "StopDescrEng": null,
+      "StopStreet": "ΠΛΑΤΕΙΑ ΟΜΟΝΟΙΑΣ",
+      "StopStreetEng": null,
+      "StopHeading": null,
+      "StopLat": "37.984431",
+      "StopLng": "23.727772",
+      "distance": "0.0006871280812188185"
+    }
+  ],
+  "total": 20
+}

@@ -1,0 +1,13 @@
+{
+  "sample": [
+    {
+      "RouteCode": "2484",
+      "LineCode": "1151",
+      "RouteDescr": "ΠΛΑΤΕΙΑ ΚΑΝΙΓΓΟΣ - ΓΚΥΖΗ",
+      "RouteDescrEng": "PLATEIA KANIGGOS - GKYZI",
+      "RouteType": "1",
+      "RouteDistance": "4933.76"
+    }
+  ],
+  "total": 1
+}

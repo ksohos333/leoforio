@@ -1,0 +1,13 @@
+{
+  "sample": [
+    {
+      "VEH_NO": "12237",
+      "CS_DATE": "Oct 31 2026 10:19:23:000PM",
+      "CS_LAT": "37.988269",
+      "CS_LNG": "23.746624",
+      "ROUTE_CODE": "2484",
+      "VEH_HEADING": "247"
+    }
+  ],
+  "total": 1
+}

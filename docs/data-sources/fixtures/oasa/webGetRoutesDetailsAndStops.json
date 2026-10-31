@@ -1,0 +1,103 @@
+{
+  "details": [
+    {
+      "routed_x": "23.73153",
+      "routed_y": "37.98545",
+      "routed_order": "1"
+    },
+    {
+      "routed_x": "23.73147",
+      "routed_y": "37.98522",
+      "routed_order": "2"
+    },
+    {
+      "routed_x": "23.73144",
+      "routed_y": "37.98513",
+      "routed_order": "3"
+    },
+    {
+      "routed_x": "23.73231",
+      "routed_y": "37.98409",
+      "routed_order": "4"
+    },
+    {
+      "routed_x": "23.73323",
+      "routed_y": "37.98283",
+      "routed_order": "5"
+    }
+  ],
+  "details_total": 44,
+  "stops": [
+    {
+      "StopCode": "10175",
+      "StopID": "18",
+      "StopDescr": "ΠΛ. ΚΑΝΙΓΓΟΣ",
+      "StopDescrEng": "PL. KANNIGOS",
+      "StopStreet": null,
+      "StopStreetEng": null,
+      "StopHeading": "140",
+      "StopLat": "37.98566",
+      "StopLng": "23.73113",
+      "RouteStopOrder": "1",
+      "StopType": "0",
+      "StopAmea": "0"
+    },
+    {
+      "StopCode": "60010",
+      "StopID": "060010",
+      "StopDescr": "ΝΑΥΑΡΙΝΟΥ",
+      "StopDescrEng": "NAYARINOY",
+      "StopStreet": "ΧΑΡ.ΤΡΙΚΟΥΠΗ",
+      "StopStreetEng": null,
+      "StopHeading": "63",
+      "StopLat": "37.9837048",
+      "StopLng": "23.7349122",
+      "RouteStopOrder": "2",
+      "StopType": "0",
+      "StopAmea": "0"
+    },
+    {
+      "StopCode": "60011",
+      "StopID": "060011",
+      "StopDescr": "ΑΡΑΧΩΒΗΣ",
+      "StopDescrEng": "ARAXOBHS",
+      "StopStreet": "ΧΑΡ.ΤΡΙΚΟΥΠΗ",
+      "StopStreetEng": null,
+      "StopHeading": "66",
+      "StopLat": "37.9849398",
+      "StopLng": "23.7374186",
+      "RouteStopOrder": "3",
+      "StopType": "0",
+      "StopAmea": "0"
+    },
+    {
+      "StopCode": "60012",
+      "StopID": "060012",
+      "StopDescr": "ΚΑΛΛΙΔΡΟΜΙΟΥ",
+      "StopDescrEng": "KALLIDROMIOY",
+      "StopStreet": "ΧΑΡ.ΤΡΙΚΟΥΠΗ",
+      "StopStreetEng": null,
+      "StopHeading": "67",
+      "StopLat": "37.985911",
+      "StopLng": "23.7392359",
+      "RouteStopOrder": "4",
+      "StopType": "0",
+      "StopAmea": "0"
+    },
+    {
+      "StopCode": "60013",
+      "StopID": "060013",
+      "StopDescr": "ΤΣΙΜΙΣΚΗ",
+      "StopDescrEng": "TSIMISKH",
+      "StopStreet": "ΧΑΡ.ΤΡΙΚΟΥΠΗ",
+      "StopStreetEng": null,
+      "StopHeading": "59",
+      "StopLat": "37.9869527",
+      "StopLng": "23.7411863",
+      "RouteStopOrder": "5",
+      "StopType": "0",
+      "StopAmea": "0"
+    }
+  ],
+  "stops_total": 22
+}

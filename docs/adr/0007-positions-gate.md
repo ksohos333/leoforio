@@ -28,6 +28,22 @@ in the decision log:
 Discovery output is documentation and fixtures. No research artefact becomes a
 runtime dependency.
 
+## Outcome: branch A (2026-10-31)
+
+Live vehicle positions are published by the operator's own public API.
+`getBusLocation&p1=<routeCode>` returns the position, heading and timestamp of
+every vehicle on a route, and it was verified to return fresh data during
+recon. Arrivals come from `getStopArrivals&p1=<stopCode>`, and route geometry
+from `webGetRoutesDetailsAndStops`.
+
+Because a public source exists, the research phase is not needed: no
+observation of the official mobile application and no inspection of its
+artefacts was required, and the app is never derived from them.
+
+Positions are published per route rather than for the whole fleet, so the
+backend queries only the routes a user is looking at, caches each route for a
+short time, and never sweeps all 486 routes for a single map view.
+
 ## Consequences
 
 - The live map's viability is decided before the map is built, so the map
