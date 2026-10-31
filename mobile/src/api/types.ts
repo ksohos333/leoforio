@@ -21,8 +21,7 @@ export interface Route {
   lineId: string;
   direction: string;
   name: string;
-  stopIds: string[];
-  geometry?: Position[];
+  stopIds: string[] | null;
 }
 
 export interface Stop {
@@ -47,5 +46,15 @@ export interface VehiclePosition {
   lineId: string;
   routeId: string;
   position: Position;
+  heading?: number;
   recordedAt: string;
+}
+
+export interface LineString {
+  type: 'Feature';
+  geometry: {
+    type: 'LineString';
+    coordinates: [number, number][];
+  };
+  properties: Record<string, unknown>;
 }

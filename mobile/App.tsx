@@ -1,8 +1,19 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { StatusBar, StyleSheet, useColorScheme, View } from 'react-native';
+import { useState } from 'react';
+import {
+  Pressable,
+  StatusBar,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import type { Line, Route } from './src/api/types';
+import { CreditsScreen } from './src/screens/CreditsScreen';
+import { LinesScreen } from './src/screens/LinesScreen';
 import { LiveMapScreen } from './src/screens/LiveMapScreen';
+import { RoutesScreen } from './src/screens/RoutesScreen';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -13,15 +24,73 @@ const queryClient = new QueryClient({
   },
 });
 
+type Screen =
+  | { name: 'lines' }
+  | { name: 'routes'; line: Line }
+  | { name: 'map'; route: Route }
+  | { name: 'credits' };
+
 function App() {
-  const isDarkMode = useColorScheme() === 'dark';
+  const [stack, setStack] = useState<Screen[]>([{ name: 'lines' }]);
+  const screen = stack[stack.length - 1];
+
+  const push = (next: Screen) => setStack(current => [...current, next]);
+  const back = () =>
+    setStack(current => (current.length > 1 ? current.slice(0, -1) : current));
+
+  const title =
+    screen.name === 'lines'
+      ? 'Lines'
+      : screen.name === 'routes'
+        ? `Line ${screen.line.code}`
+        : screen.name === 'map'
+          ? screen.route.name || screen.route.direction
+          : 'Credits';
 
   return (
     <QueryClientProvider client={queryClient}>
       <SafeAreaProvider>
-        <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+        <StatusBar barStyle="dark-content" />
         <View style={styles.container}>
-          <LiveMapScreen />
+          <View style={styles.header}>
+            {stack.length > 1 ? (
+              <Pressable
+                onPress={back}
+                accessibilityRole="button"
+                accessibilityLabel="Go back">
+                <Text style={styles.headerButton}>‹ Back</Text>
+              </Pressable>
+            ) : (
+              <View />
+            )}
+            <Text style={styles.title} numberOfLines={1}>
+              {title}
+            </Text>
+            {screen.name === 'credits' ? (
+              <View />
+            ) : (
+              <Pressable
+                onPress={() => push({ name: 'credits' })}
+                accessibilityRole="button"
+                accessibilityLabel="Credits">
+                <Text style={styles.headerButton}>Credits</Text>
+              </Pressable>
+            )}
+          </View>
+
+          <View style={styles.body}>
+            {screen.name === 'lines' ? (
+              <LinesScreen onSelect={line => push({ name: 'routes', line })} />
+            ) : null}
+            {screen.name === 'routes' ? (
+              <RoutesScreen
+                line={screen.line}
+                onSelect={route => push({ name: 'map', route })}
+              />
+            ) : null}
+            {screen.name === 'map' ? <LiveMapScreen route={screen.route} /> : null}
+            {screen.name === 'credits' ? <CreditsScreen /> : null}
+          </View>
         </View>
       </SafeAreaProvider>
     </QueryClientProvider>
@@ -30,6 +99,30 @@ function App() {
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#d8dce2',
+  },
+  title: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1f2933',
+  },
+  headerButton: {
+    fontSize: 15,
+    color: '#2f6fed',
+  },
+  body: {
     flex: 1,
   },
 });

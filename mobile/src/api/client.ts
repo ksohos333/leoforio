@@ -1,5 +1,12 @@
 import { config } from '../config';
-import type { Arrival, VehiclePosition } from './types';
+import type {
+  Arrival,
+  Line,
+  LineString,
+  Route,
+  Stop,
+  VehiclePosition,
+} from './types';
 
 export class ApiError extends Error {
   constructor(
@@ -31,9 +38,24 @@ async function getJson<T>(path: string): Promise<T> {
   }
 }
 
-export const api = {
-  arrivals: (stopId: string): Promise<Arrival[]> =>
-    getJson<Arrival[]>(`/api/v1/stops/${encodeURIComponent(stopId)}/arrivals`),
+const route = (routeCode: string) => encodeURIComponent(routeCode);
+const stop = (stopCode: string) => encodeURIComponent(stopCode);
 
-  vehicles: (): Promise<VehiclePosition[]> => getJson<VehiclePosition[]>('/api/v1/vehicles'),
+export const api = {
+  lines: (): Promise<Line[]> => getJson<Line[]>('/api/v1/lines'),
+
+  routes: (lineCode: string): Promise<Route[]> =>
+    getJson<Route[]>(`/api/v1/routes?line=${encodeURIComponent(lineCode)}`),
+
+  routeStops: (routeCode: string): Promise<Stop[]> =>
+    getJson<Stop[]>(`/api/v1/routes/${route(routeCode)}/stops`),
+
+  routeGeometry: (routeCode: string): Promise<LineString> =>
+    getJson<LineString>(`/api/v1/routes/${route(routeCode)}/geometry`),
+
+  vehicles: (routeCode: string): Promise<VehiclePosition[]> =>
+    getJson<VehiclePosition[]>(`/api/v1/routes/${route(routeCode)}/vehicles`),
+
+  arrivals: (stopCode: string): Promise<Arrival[]> =>
+    getJson<Arrival[]>(`/api/v1/stops/${stop(stopCode)}/arrivals`),
 };
