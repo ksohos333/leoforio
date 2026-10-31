@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/ksohos333/leoforio/backend/internal/model"
+	"github.com/ksohos333/leoforio/backend/internal/store"
 )
 
 type stubArrivals struct {
@@ -69,8 +70,95 @@ func (s *stubNetwork) RouteGeometry(_ context.Context, _ string) ([]model.Positi
 	}, nil
 }
 
+type stubStops struct {
+	calls int
+}
+
+func (s *stubStops) SearchStops(_ context.Context, query string, _ int) ([]store.Stop, error) {
+	s.calls++
+	if query == "" {
+		return nil, nil
+	}
+	return []store.Stop{{ID: "10175", Code: "18", Name: "ΠΛ. ΚΑΝΙΓΓΟΣ", Latitude: 37.98566, Longitude: 23.73113}}, nil
+}
+
+func (s *stubStops) NearbyStops(_ context.Context, _, _, _ float64, _ int) ([]store.Stop, error) {
+	s.calls++
+	return []store.Stop{{ID: "60718", Name: "ΣΥΝΤΑΓΜΑ", Distance: 0.023}}, nil
+}
+
+func (s *stubStops) StopByID(_ context.Context, id string) (store.Stop, error) {
+	s.calls++
+	if id != "10175" {
+		return store.Stop{}, errors.New("no such stop")
+	}
+	return store.Stop{ID: "10175", Name: "ΠΛ. ΚΑΝΙΓΓΟΣ"}, nil
+}
+
+func TestStopSearchRequiresAQuery(t *testing.T) {
+	srv := New(Dependencies{Stops: &stubStops{}, Version: "test"})
+	rec := httptest.NewRecorder()
+	srv.Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/v1/stops/search", nil))
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 without a query, got %d", rec.Code)
+	}
+}
+
+func TestStopSearchIsServed(t *testing.T) {
+	srv := New(Dependencies{Stops: &stubStops{}, Version: "test"})
+	rec := httptest.NewRecorder()
+	srv.Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/v1/stops/search?q=kaniggos", nil))
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+	if body := rec.Body.String(); !contains(body, "10175") {
+		t.Errorf("expected the stop in the response, got %s", body)
+	}
+}
+
+func TestNearbyStopsAreServed(t *testing.T) {
+	srv := New(Dependencies{Stops: &stubStops{}, Version: "test"})
+	rec := httptest.NewRecorder()
+	srv.Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/v1/stops/nearby?lat=37.97&lon=23.73", nil))
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+	if body := rec.Body.String(); !contains(body, "60718") {
+		t.Errorf("expected the nearby stop in the response, got %s", body)
+	}
+}
+
+func TestNearbyStopsRejectBadCoordinates(t *testing.T) {
+	srv := New(Dependencies{Stops: &stubStops{}, Version: "test"})
+	rec := httptest.NewRecorder()
+	srv.Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/v1/stops/nearby?lat=north", nil))
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for bad coordinates, got %d", rec.Code)
+	}
+}
+
+func TestStopDetailsAreServed(t *testing.T) {
+	srv := New(Dependencies{Stops: &stubStops{}, Version: "test"})
+	rec := httptest.NewRecorder()
+	srv.Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/v1/stops/10175", nil))
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+
+	rec = httptest.NewRecorder()
+	srv.Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/v1/stops/does-not-exist", nil))
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("expected 404 for an unknown stop, got %d", rec.Code)
+	}
+}
+
 func TestHealth(t *testing.T) {
-	srv := New(nil, nil, nil, "test")
+	srv := New(Dependencies{Version: "test"})
 	rec := httptest.NewRecorder()
 	srv.Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/healthz", nil))
 
@@ -80,7 +168,7 @@ func TestHealth(t *testing.T) {
 }
 
 func TestMetaCarriesAttribution(t *testing.T) {
-	srv := New(nil, nil, nil, "test")
+	srv := New(Dependencies{Version: "test"})
 	rec := httptest.NewRecorder()
 	srv.Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/v1/meta", nil))
 
@@ -93,7 +181,7 @@ func TestMetaCarriesAttribution(t *testing.T) {
 }
 
 func TestArrivalsWithoutSource(t *testing.T) {
-	srv := New(nil, nil, nil, "test")
+	srv := New(Dependencies{Version: "test"})
 	rec := httptest.NewRecorder()
 	srv.Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/v1/stops/10175/arrivals", nil))
 
@@ -104,7 +192,7 @@ func TestArrivalsWithoutSource(t *testing.T) {
 
 func TestArrivalsAreCached(t *testing.T) {
 	stub := &stubArrivals{}
-	srv := New(stub, nil, nil, "test")
+	srv := New(Dependencies{Arrivals: stub, Version: "test"})
 
 	for i := 0; i < 3; i++ {
 		rec := httptest.NewRecorder()
@@ -120,7 +208,7 @@ func TestArrivalsAreCached(t *testing.T) {
 }
 
 func TestVehiclesWithoutSource(t *testing.T) {
-	srv := New(nil, nil, nil, "test")
+	srv := New(Dependencies{Version: "test"})
 	rec := httptest.NewRecorder()
 	srv.Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/v1/routes/2484/vehicles", nil))
 
@@ -131,7 +219,7 @@ func TestVehiclesWithoutSource(t *testing.T) {
 
 func TestVehiclesAreCachedPerRoute(t *testing.T) {
 	stub := &stubPositions{}
-	srv := New(nil, stub, nil, "test")
+	srv := New(Dependencies{Positions: stub, Version: "test"})
 
 	for i := 0; i < 3; i++ {
 		rec := httptest.NewRecorder()
@@ -153,7 +241,7 @@ func TestVehiclesAreCachedPerRoute(t *testing.T) {
 }
 
 func TestRoutesRequireALine(t *testing.T) {
-	srv := New(nil, nil, &stubNetwork{}, "test")
+	srv := New(Dependencies{Network: &stubNetwork{}, Version: "test"})
 	rec := httptest.NewRecorder()
 	srv.Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/v1/routes", nil))
 
@@ -163,7 +251,7 @@ func TestRoutesRequireALine(t *testing.T) {
 }
 
 func TestLinesAreServed(t *testing.T) {
-	srv := New(nil, nil, &stubNetwork{}, "test")
+	srv := New(Dependencies{Network: &stubNetwork{}, Version: "test"})
 	rec := httptest.NewRecorder()
 	srv.Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/v1/lines", nil))
 
@@ -176,7 +264,7 @@ func TestLinesAreServed(t *testing.T) {
 }
 
 func TestGeometryIsGeoJSON(t *testing.T) {
-	srv := New(nil, nil, &stubNetwork{}, "test")
+	srv := New(Dependencies{Network: &stubNetwork{}, Version: "test"})
 	rec := httptest.NewRecorder()
 	srv.Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/v1/routes/2484/geometry", nil))
 
@@ -194,7 +282,7 @@ func TestGeometryIsGeoJSON(t *testing.T) {
 
 func TestUpstreamFailureIsBadGateway(t *testing.T) {
 	stub := &stubArrivals{err: errors.New("upstream down")}
-	srv := New(stub, nil, nil, "test")
+	srv := New(Dependencies{Arrivals: stub, Version: "test"})
 
 	rec := httptest.NewRecorder()
 	srv.Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/v1/stops/10175/arrivals", nil))

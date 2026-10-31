@@ -58,4 +58,19 @@ export const api = {
 
   arrivals: (stopCode: string): Promise<Arrival[]> =>
     getJson<Arrival[]>(`/api/v1/stops/${stop(stopCode)}/arrivals`),
+
+  stop: (stopCode: string): Promise<Stop> =>
+    getJson<Stop>(`/api/v1/stops/${stop(stopCode)}`),
+
+  searchStops: (query: string): Promise<Stop[]> =>
+    getJson<Stop[]>(`/api/v1/stops/search?q=${encodeURIComponent(query)}`),
+
+  nearbyStops: (
+    latitude: number,
+    longitude: number,
+    radiusKm = 1,
+  ): Promise<Stop[]> =>
+    getJson<Stop[]>(
+      `/api/v1/stops/nearby?lat=${latitude}&lon=${longitude}&radius=${radiusKm}`,
+    ),
 };

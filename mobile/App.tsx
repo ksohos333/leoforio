@@ -9,11 +9,13 @@ import {
 } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import type { Line, Route } from './src/api/types';
+import type { Line, Route, Stop } from './src/api/types';
 import { CreditsScreen } from './src/screens/CreditsScreen';
 import { LinesScreen } from './src/screens/LinesScreen';
 import { LiveMapScreen } from './src/screens/LiveMapScreen';
 import { RoutesScreen } from './src/screens/RoutesScreen';
+import { SearchScreen } from './src/screens/SearchScreen';
+import { StopScreen } from './src/screens/StopScreen';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -25,13 +27,15 @@ const queryClient = new QueryClient({
 });
 
 type Screen =
+  | { name: 'search' }
+  | { name: 'stop'; stop: Stop }
   | { name: 'lines' }
   | { name: 'routes'; line: Line }
   | { name: 'map'; route: Route }
   | { name: 'credits' };
 
 function App() {
-  const [stack, setStack] = useState<Screen[]>([{ name: 'lines' }]);
+  const [stack, setStack] = useState<Screen[]>([{ name: 'search' }]);
   const screen = stack[stack.length - 1];
 
   const push = (next: Screen) => setStack(current => [...current, next]);
@@ -39,13 +43,17 @@ function App() {
     setStack(current => (current.length > 1 ? current.slice(0, -1) : current));
 
   const title =
-    screen.name === 'lines'
-      ? 'Lines'
-      : screen.name === 'routes'
-        ? `Line ${screen.line.code}`
-        : screen.name === 'map'
-          ? screen.route.name || screen.route.direction
-          : 'Credits';
+    screen.name === 'search'
+      ? 'leoforio'
+      : screen.name === 'stop'
+        ? screen.stop.name
+        : screen.name === 'lines'
+          ? 'Lines'
+          : screen.name === 'routes'
+            ? `Line ${screen.line.code}`
+            : screen.name === 'map'
+              ? screen.route.name || screen.route.direction
+              : 'Credits';
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -73,12 +81,16 @@ function App() {
                 onPress={() => push({ name: 'credits' })}
                 accessibilityRole="button"
                 accessibilityLabel="Credits">
-                <Text style={styles.headerButton}>Credits</Text>
+                <Text style={styles.headerButton}>Info</Text>
               </Pressable>
             )}
           </View>
 
           <View style={styles.body}>
+            {screen.name === 'search' ? (
+              <SearchScreen onSelect={stop => push({ name: 'stop', stop })} />
+            ) : null}
+            {screen.name === 'stop' ? <StopScreen stop={screen.stop} /> : null}
             {screen.name === 'lines' ? (
               <LinesScreen onSelect={line => push({ name: 'routes', line })} />
             ) : null}
@@ -91,6 +103,18 @@ function App() {
             {screen.name === 'map' ? <LiveMapScreen route={screen.route} /> : null}
             {screen.name === 'credits' ? <CreditsScreen /> : null}
           </View>
+
+          {screen.name === 'search' ? (
+            <View style={styles.tabs}>
+              <Pressable
+                style={styles.tab}
+                onPress={() => push({ name: 'lines' })}
+                accessibilityRole="button"
+                accessibilityLabel="Browse lines">
+                <Text style={styles.tabText}>Browse lines</Text>
+              </Pressable>
+            </View>
+          ) : null}
         </View>
       </SafeAreaProvider>
     </QueryClientProvider>
@@ -124,6 +148,20 @@ const styles = StyleSheet.create({
   },
   body: {
     flex: 1,
+  },
+  tabs: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#d8dce2',
+  },
+  tab: {
+    alignSelf: 'flex-start',
+    paddingVertical: 6,
+  },
+  tabText: {
+    fontSize: 14,
+    color: '#2f6fed',
   },
 });
 

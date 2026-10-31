@@ -39,13 +39,16 @@ type Stop struct {
 }
 
 // Arrival is an expected arrival of a vehicle at a stop.
+//
+// The upstream publishes only the remaining minutes, so the expected time is
+// reconstructed from it. A scheduled time is set when the source knows one.
 type Arrival struct {
-	StopID    string    `json:"stopId"`
-	LineID    string    `json:"lineId"`
-	RouteID   string    `json:"routeId"`
-	VehicleID string    `json:"vehicleId,omitempty"`
-	Scheduled time.Time `json:"scheduled"`
-	Expected  time.Time `json:"expected"`
+	StopID    string     `json:"stopId"`
+	LineID    string     `json:"lineId"`
+	RouteID   string     `json:"routeId"`
+	VehicleID string     `json:"vehicleId,omitempty"`
+	Scheduled *time.Time `json:"scheduled,omitempty"`
+	Expected  time.Time  `json:"expected"`
 }
 
 // VehiclePosition is the last known position of a vehicle.

@@ -40,9 +40,18 @@ npx jest
 | `src/api/types.ts` | types mirroring the backend JSON payloads |
 | `src/api/client.ts` | typed HTTP client with request timeout |
 | `src/map/mapStyle.ts` | raster MapLibre style built from the configured tile URL |
-| `src/map/VehicleMap.tsx` | map with vehicle markers |
-| `src/screens/LiveMapScreen.tsx` | live map screen with polling and honest empty states |
+| `src/map/VehicleMap.tsx` | map with route path, stops and vehicle markers |
+| `src/screens/SearchScreen.tsx` | stop search and the stops near you |
+| `src/screens/StopScreen.tsx` | arrivals at a stop, with the time until each bus |
+| `src/screens/LinesScreen.tsx` | the lines the operator publishes |
+| `src/screens/RoutesScreen.tsx` | the routes of a line |
+| `src/screens/LiveMapScreen.tsx` | live map with polling and honest empty states |
+| `src/screens/CreditsScreen.tsx` | disclaimer and attribution to OASA |
 | `jest.setup.js` | mocks for the MapLibre native module and `fetch` |
+
+The app asks for the coarse location only, and only when the user taps
+"Near me". It is never requested in the background and never required to use
+the app.
 
 ## Notes
 
@@ -51,3 +60,5 @@ npx jest
   exist on npm; the current package exports `Map`, `Camera`, `GeoJSONSource`
   and `Layer`, and layer paint uses style-spec keys such as `circle-radius`.
 - Push notifications are planned for v1.1 and are not wired up yet.
+- The location comes from `@react-native-community/geolocation`, which is
+  loaded lazily so that it is only needed on a device.

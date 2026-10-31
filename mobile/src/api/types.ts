@@ -30,6 +30,7 @@ export interface Stop {
   name: string;
   lat: number;
   lon: number;
+  distanceKm?: number;
 }
 
 export interface Arrival {
@@ -37,7 +38,7 @@ export interface Arrival {
   lineId: string;
   routeId: string;
   vehicleId?: string;
-  scheduled: string;
+  scheduled?: string;
   expected: string;
 }
 

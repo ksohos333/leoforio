@@ -8,12 +8,21 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/ksohos333/leoforio/backend/internal/cache"
 	"github.com/ksohos333/leoforio/backend/internal/model"
 	"github.com/ksohos333/leoforio/backend/internal/source"
+	"github.com/ksohos333/leoforio/backend/internal/store"
 )
+
+// StopFinder searches the locally imported stop index.
+type StopFinder interface {
+	SearchStops(ctx context.Context, query string, limit int) ([]store.Stop, error)
+	NearbyStops(ctx context.Context, latitude, longitude, radiusKm float64, limit int) ([]store.Stop, error)
+	StopByID(ctx context.Context, id string) (store.Stop, error)
+}
 
 // Cache lifetimes per resource.
 const (
@@ -22,11 +31,21 @@ const (
 	NetworkStaticTTL = 6 * time.Hour
 )
 
+// Dependencies are the sources and stores the API serves from.
+type Dependencies struct {
+	Arrivals  source.ArrivalsSource
+	Positions source.PositionsSource
+	Network   source.NetworkSource
+	Stops     StopFinder
+	Version   string
+}
+
 // Server serves the API.
 type Server struct {
 	arrivals  source.ArrivalsSource
 	positions source.PositionsSource
 	network   source.NetworkSource
+	stops     StopFinder
 	version   string
 	startedAt time.Time
 
@@ -38,19 +57,15 @@ type Server struct {
 	geometryCache  *cache.Cache[[]model.Position]
 }
 
-// New returns a Server. Any source may be nil, in which case the endpoints
-// that depend on it report that the source is not configured.
-func New(
-	arrivals source.ArrivalsSource,
-	positions source.PositionsSource,
-	network source.NetworkSource,
-	version string,
-) *Server {
+// New returns a Server. Any dependency may be nil, in which case the
+// endpoints that depend on it report that the source is not configured.
+func New(dependencies Dependencies) *Server {
 	return &Server{
-		arrivals:       arrivals,
-		positions:      positions,
-		network:        network,
-		version:        version,
+		arrivals:       dependencies.Arrivals,
+		positions:      dependencies.Positions,
+		network:        dependencies.Network,
+		stops:          dependencies.Stops,
+		version:        dependencies.Version,
 		startedAt:      time.Now(),
 		arrivalsCache:  cache.New[[]model.Arrival](ArrivalsTTL),
 		positionsCache: cache.New[[]model.VehiclePosition](PositionsTTL),
@@ -71,6 +86,9 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("GET /api/v1/routes/{routeCode}/vehicles", s.handleVehicles)
 	mux.HandleFunc("GET /api/v1/routes/{routeCode}/stops", s.handleRouteStops)
 	mux.HandleFunc("GET /api/v1/routes/{routeCode}/geometry", s.handleRouteGeometry)
+	mux.HandleFunc("GET /api/v1/stops/search", s.handleStopSearch)
+	mux.HandleFunc("GET /api/v1/stops/nearby", s.handleStopsNearby)
+	mux.HandleFunc("GET /api/v1/stops/{stopCode}", s.handleStop)
 	mux.HandleFunc("GET /api/v1/stops/{stopCode}/arrivals", s.handleArrivals)
 	return mux
 }
@@ -195,6 +213,83 @@ func (s *Server) handleRouteGeometry(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Cache", "stale")
 	}
 	writeJSON(w, http.StatusOK, geoJSON(geometry))
+}
+
+func (s *Server) handleStopSearch(w http.ResponseWriter, r *http.Request) {
+	if s.stops == nil {
+		writeError(w, http.StatusServiceUnavailable, "the stop index is not available")
+		return
+	}
+
+	query := r.URL.Query().Get("q")
+	if query == "" {
+		writeError(w, http.StatusBadRequest, "the q query parameter is required")
+		return
+	}
+
+	limit := queryLimit(r, 20)
+	stops, err := s.stops.SearchStops(r.Context(), query, limit)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, stops)
+}
+
+func (s *Server) handleStopsNearby(w http.ResponseWriter, r *http.Request) {
+	if s.stops == nil {
+		writeError(w, http.StatusServiceUnavailable, "the stop index is not available")
+		return
+	}
+
+	latitude, err := strconv.ParseFloat(r.URL.Query().Get("lat"), 64)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "the lat query parameter must be a number")
+		return
+	}
+	longitude, err := strconv.ParseFloat(r.URL.Query().Get("lon"), 64)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "the lon query parameter must be a number")
+		return
+	}
+
+	radius := 1.0
+	if value, err := strconv.ParseFloat(r.URL.Query().Get("radius"), 64); err == nil && value > 0 {
+		radius = value
+	}
+
+	stops, err := s.stops.NearbyStops(r.Context(), latitude, longitude, radius, queryLimit(r, 20))
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, stops)
+}
+
+func (s *Server) handleStop(w http.ResponseWriter, r *http.Request) {
+	if s.stops == nil {
+		writeError(w, http.StatusServiceUnavailable, "the stop index is not available")
+		return
+	}
+
+	stop, err := s.stops.StopByID(r.Context(), r.PathValue("stopCode"))
+	if err != nil {
+		writeError(w, http.StatusNotFound, "no such stop")
+		return
+	}
+	writeJSON(w, http.StatusOK, stop)
+}
+
+// queryLimit reads a result limit from the query string.
+func queryLimit(r *http.Request, fallback int) int {
+	value, err := strconv.Atoi(r.URL.Query().Get("limit"))
+	if err != nil || value <= 0 {
+		return fallback
+	}
+	if value > 100 {
+		return 100
+	}
+	return value
 }
 
 func (s *Server) handleArrivals(w http.ResponseWriter, r *http.Request) {
