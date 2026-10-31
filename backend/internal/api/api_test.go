@@ -16,13 +16,13 @@ type stubArrivals struct {
 	err   error
 }
 
-func (s *stubArrivals) Arrivals(_ context.Context, stopID string) ([]model.Arrival, error) {
+func (s *stubArrivals) Arrivals(_ context.Context, stopCode string) ([]model.Arrival, error) {
 	s.calls++
 	if s.err != nil {
 		return nil, s.err
 	}
 	return []model.Arrival{{
-		StopID:   stopID,
+		StopID:   stopCode,
 		LineID:   "815",
 		RouteID:  "815-A",
 		Expected: time.Date(2026, 10, 31, 12, 0, 0, 0, time.UTC),
@@ -33,17 +33,44 @@ type stubPositions struct {
 	calls int
 }
 
-func (s *stubPositions) Positions(context.Context) ([]model.VehiclePosition, error) {
+func (s *stubPositions) Positions(_ context.Context, routeCode string) ([]model.VehiclePosition, error) {
 	s.calls++
 	return []model.VehiclePosition{{
 		VehicleID: "v1",
-		LineID:    "815",
+		RouteID:   routeCode,
 		Position:  model.Position{Latitude: 37.98, Longitude: 23.72},
 	}}, nil
 }
 
+type stubNetwork struct {
+	calls int
+}
+
+func (s *stubNetwork) Lines(context.Context) ([]model.Line, error) {
+	s.calls++
+	return []model.Line{{ID: "021", Code: "021", Name: "ΠΛΑΤΕΙΑ ΚΑΝΙΓΓΟΣ"}}, nil
+}
+
+func (s *stubNetwork) Routes(_ context.Context, lineCode string) ([]model.Route, error) {
+	s.calls++
+	return []model.Route{{ID: "2484", LineID: lineCode, Name: "PLATEIA KANIGKOS"}}, nil
+}
+
+func (s *stubNetwork) RouteStops(_ context.Context, routeCode string) ([]model.Stop, error) {
+	s.calls++
+	return []model.Stop{{ID: "10175", Code: "18", Name: "ΠΛ. ΚΑΝΙΓΓΟΣ"}}, nil
+}
+
+func (s *stubNetwork) RouteGeometry(_ context.Context, _ string) ([]model.Position, error) {
+	s.calls++
+	return []model.Position{
+		{Latitude: 37.98545, Longitude: 23.73153},
+		{Latitude: 37.98522, Longitude: 23.73147},
+	}, nil
+}
+
 func TestHealth(t *testing.T) {
-	srv := New(nil, nil, "test")
+	srv := New(nil, nil, nil, "test")
 	rec := httptest.NewRecorder()
 	srv.Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/healthz", nil))
 
@@ -52,10 +79,23 @@ func TestHealth(t *testing.T) {
 	}
 }
 
-func TestArrivalsWithoutSource(t *testing.T) {
-	srv := New(nil, nil, "test")
+func TestMetaCarriesAttribution(t *testing.T) {
+	srv := New(nil, nil, nil, "test")
 	rec := httptest.NewRecorder()
-	srv.Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/v1/stops/stop-1/arrivals", nil))
+	srv.Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/v1/meta", nil))
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+	if body := rec.Body.String(); !contains(body, "OASA") {
+		t.Errorf("expected the attribution to be present, got %s", body)
+	}
+}
+
+func TestArrivalsWithoutSource(t *testing.T) {
+	srv := New(nil, nil, nil, "test")
+	rec := httptest.NewRecorder()
+	srv.Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/v1/stops/10175/arrivals", nil))
 
 	if rec.Code != http.StatusServiceUnavailable {
 		t.Fatalf("expected 503 when no source is configured, got %d", rec.Code)
@@ -64,11 +104,11 @@ func TestArrivalsWithoutSource(t *testing.T) {
 
 func TestArrivalsAreCached(t *testing.T) {
 	stub := &stubArrivals{}
-	srv := New(stub, nil, "test")
+	srv := New(stub, nil, nil, "test")
 
 	for i := 0; i < 3; i++ {
 		rec := httptest.NewRecorder()
-		srv.Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/v1/stops/stop-1/arrivals", nil))
+		srv.Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/v1/stops/10175/arrivals", nil))
 		if rec.Code != http.StatusOK {
 			t.Fatalf("expected 200, got %d", rec.Code)
 		}
@@ -80,40 +120,99 @@ func TestArrivalsAreCached(t *testing.T) {
 }
 
 func TestVehiclesWithoutSource(t *testing.T) {
-	srv := New(nil, nil, "test")
+	srv := New(nil, nil, nil, "test")
 	rec := httptest.NewRecorder()
-	srv.Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/v1/vehicles", nil))
+	srv.Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/v1/routes/2484/vehicles", nil))
 
 	if rec.Code != http.StatusServiceUnavailable {
 		t.Fatalf("expected 503 when no source is configured, got %d", rec.Code)
 	}
 }
 
-func TestVehiclesAreCached(t *testing.T) {
+func TestVehiclesAreCachedPerRoute(t *testing.T) {
 	stub := &stubPositions{}
-	srv := New(nil, stub, "test")
+	srv := New(nil, stub, nil, "test")
 
 	for i := 0; i < 3; i++ {
 		rec := httptest.NewRecorder()
-		srv.Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/v1/vehicles", nil))
+		srv.Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/v1/routes/2484/vehicles", nil))
 		if rec.Code != http.StatusOK {
 			t.Fatalf("expected 200, got %d", rec.Code)
 		}
 	}
 
-	if stub.calls != 1 {
-		t.Errorf("expected 1 upstream call for 3 requests, got %d", stub.calls)
+	rec := httptest.NewRecorder()
+	srv.Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/v1/routes/4198/vehicles", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+
+	if stub.calls != 2 {
+		t.Errorf("expected 2 upstream calls for two routes, got %d", stub.calls)
+	}
+}
+
+func TestRoutesRequireALine(t *testing.T) {
+	srv := New(nil, nil, &stubNetwork{}, "test")
+	rec := httptest.NewRecorder()
+	srv.Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/v1/routes", nil))
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 without a line parameter, got %d", rec.Code)
+	}
+}
+
+func TestLinesAreServed(t *testing.T) {
+	srv := New(nil, nil, &stubNetwork{}, "test")
+	rec := httptest.NewRecorder()
+	srv.Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/v1/lines", nil))
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+	if body := rec.Body.String(); !contains(body, "ΠΛΑΤΕΙΑ") {
+		t.Errorf("expected the line list in the response, got %s", body)
+	}
+}
+
+func TestGeometryIsGeoJSON(t *testing.T) {
+	srv := New(nil, nil, &stubNetwork{}, "test")
+	rec := httptest.NewRecorder()
+	srv.Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/v1/routes/2484/geometry", nil))
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+	body := rec.Body.String()
+	if !contains(body, "LineString") {
+		t.Errorf("expected a GeoJSON LineString, got %s", body)
+	}
+	if !contains(body, "23.73153") {
+		t.Errorf("expected the coordinates in the response, got %s", body)
 	}
 }
 
 func TestUpstreamFailureIsBadGateway(t *testing.T) {
 	stub := &stubArrivals{err: errors.New("upstream down")}
-	srv := New(stub, nil, "test")
+	srv := New(stub, nil, nil, "test")
 
 	rec := httptest.NewRecorder()
-	srv.Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/v1/stops/stop-1/arrivals", nil))
+	srv.Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/v1/stops/10175/arrivals", nil))
 
 	if rec.Code != http.StatusBadGateway {
 		t.Fatalf("expected 502 for a failing upstream, got %d", rec.Code)
 	}
+}
+
+func contains(haystack, needle string) bool {
+	return len(haystack) >= len(needle) && indexOf(haystack, needle) >= 0
+}
+
+func indexOf(haystack, needle string) int {
+	for i := 0; i+len(needle) <= len(haystack); i++ {
+		if haystack[i:i+len(needle)] == needle {
+			return i
+		}
+	}
+	return -1
 }

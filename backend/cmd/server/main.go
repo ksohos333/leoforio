@@ -1,9 +1,10 @@
 // Command server runs the leoforio API.
 //
-// Upstream sources are not wired yet: the endpoints that need one report
-// 503 until a source is added. See docs/data-sources/README.md for the
-// source policy and docs/adr/0004-app-never-calls-upstream.md for why all
-// upstream access lives behind the API.
+// All upstream access goes through the OASA Telematics adapter, behind caches
+// that keep the upstream load proportional to distinct stops and routes
+// rather than to the number of clients. See docs/data-sources/README.md for
+// the source policy and docs/adr/0004-app-never-calls-upstream.md for why the
+// app never talks to an upstream directly.
 package main
 
 import (
@@ -17,6 +18,7 @@ import (
 	"time"
 
 	"github.com/ksohos333/leoforio/backend/internal/api"
+	"github.com/ksohos333/leoforio/backend/internal/source/oasa"
 )
 
 func main() {
@@ -25,9 +27,12 @@ func main() {
 	addr := envOr("LEOFORIO_ADDR", ":8080")
 	version := envOr("LEOFORIO_VERSION", "dev")
 
+	upstream := oasa.New(oasa.NewClient(envOr("LEOFORIO_OASA_BASE_URL", "")))
+	logger.Info("upstream configured", "base_url", oasa.DefaultBaseURL)
+
 	srv := &http.Server{
 		Addr:              addr,
-		Handler:           api.New(nil, nil, version).Routes(),
+		Handler:           api.New(upstream, upstream, upstream, version).Routes(),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 

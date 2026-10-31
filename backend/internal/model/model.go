@@ -54,5 +54,6 @@ type VehiclePosition struct {
 	LineID     string    `json:"lineId"`
 	RouteID    string    `json:"routeId"`
 	Position   Position  `json:"position"`
+	Heading    int       `json:"heading,omitempty"`
 	RecordedAt time.Time `json:"recordedAt"`
 }
