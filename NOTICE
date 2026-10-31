@@ -1,0 +1,21 @@
+leoforio — unofficial app for Greek public transport
+
+This project is not affiliated with, endorsed by, or supported by OASA
+(Οργανισμός Αστικών Συγκοινωνιών Αθηνών), the Athens Urban Transport
+Organization, or by any other transport operator.
+
+Transit data © OASA, published by OASA on data.gov.gr and served through the
+OASA Telematics service. OASA is credited as the source of all transit data.
+
+The realtime feed is used for personal, non-commercial purposes only, as
+required by the OASA Telematics terms of use, and is never stored or
+redistributed. Public-sector open data is reused under the Greek open data
+framework (law 4727/2020) and the terms published with the dataset on
+data.gov.gr.
+
+Map data © OpenStreetMap contributors. Map tiles are served by a configured
+provider, see docs/adr/0005-map-tile-provider.md.
+
+The software is licensed under the AGPL-3.0, see LICENSE. The data is not:
+the terms that govern the transit data restrict it to personal, non-commercial
+use. See docs/legal.md for the full analysis.

@@ -4,6 +4,8 @@
 
 Open app for Greek public transport, starting with Athens (OASA network). **Status: idea stage** — deliberately on the back burner while I build my main project. This repo exists to timestamp the idea, capture the plan, and gather signal from others who share the pain.
 
+> **Unofficial.** leoforio is not affiliated with, endorsed by or supported by OASA. Transit data © OASA. The realtime feed is used for personal, non-commercial purposes only, per the OASA Telematics terms of use, and is never stored or redistributed. See [NOTICE](NOTICE) and [docs/legal.md](docs/legal.md).
+
 ## Repository
 
 | Path | Purpose |

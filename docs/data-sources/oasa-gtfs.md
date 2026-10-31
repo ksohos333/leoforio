@@ -11,7 +11,16 @@
 
 ## Terms
 
-- Published on the Greek open data portal (data.gov.gr) as an OASA dataset.
+- Published by OASA on the Greek national open data portal (data.gov.gr).
+  Reuse rests on the Greek public-sector open data framework (law 4727/2020),
+  which is the basis other projects in this space rely on.
+- The dataset page carries **no explicit Creative Commons licence
+  statement**. Its only licensing language is that the data are provided
+  *as is* and that the Athens transport services bear no responsibility for
+  the results of any third-party use.
+- Snapshot: `fixtures/oasa/datagovgr-dataset-2026-10-31.html`
+- Community projects sometimes describe this feed as CC BY-NC 4.0; that
+  description was not found on the dataset page and is not relied on here.
 - Attribution required: the agency is `OASA / Athens Urban Transport
   Organization`, timezone `Europe/Athens`, and the feed must be credited to
   OASA.
