@@ -30,7 +30,7 @@ fidelity, which is the product's signature surface.
 ## Decision
 
 - React Native community CLI with TypeScript, no Expo runtime dependency.
-- Map rendering via `@maplibre/react-native-maplibre`.
+- Map rendering via `@maplibre/maplibre-react-native`.
 - MapLibre styles and tiles are served by our own backend or a configured
   provider (see ADR 0005), never by a hardcoded third-party demo style.
 
@@ -42,3 +42,18 @@ fidelity, which is the product's signature surface.
   F-Droid reproducibility effort.
 - Package compatibility with the current React Native version is verified in
   P0 before any map work begins.
+
+## Verification note (P0, 2026-10-31)
+
+The compatibility check found that the package previously known as
+`react-native-maplibre-gl`, and later `@maplibre/react-native-maplibre`, no
+longer resolve on npm. The current package is
+`@maplibre/maplibre-react-native`, whose peer requirements are React Native
+>= 0.80, React >= 19.1 and optionally Expo >= 54, so it fits React Native
+0.88 with React 19.
+
+Its API also differs from the older package: it exports `Map`, `Camera`,
+`GeoJSONSource` and `Layer` rather than `MapView`, `Camera`, `ShapeSource`
+and `PointAnnotation`, `Camera` takes `zoom` and `center` props, and layer
+paint uses style-spec keys such as `circle-radius` instead of camelCase.
+
