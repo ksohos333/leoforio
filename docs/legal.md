@@ -63,11 +63,23 @@ Each of these was checked against a primary source on 2026-10-31.
 
 ## Known open questions
 
-- Whether OASA would grant written permission, and on what terms. No request
-  has been made. Asking would reduce the ambiguity for every project in this
-  space, and is the single most useful legal step available.
-- Whether the static GTFS may be used in a commercial fork. The dataset page
-  does not say, so the answer is currently "do not".
+- **Whether OASA would grant written permission, and on what terms.** No
+  request has been made yet. Asking would reduce the ambiguity for every
+  project in this space, and it is the single most useful legal step
+  available: a ready to send draft is in
+  [permission-request.md](./permission-request.md).
+- **A second rights-holder.** The telematics system was built under a public
+  private partnership, and the intellectual property in the system, and
+  possibly in its output, may sit with the private partner rather than with
+  OASA. A permission request that only addresses OASA may leave that party
+  unaddressed, so the request should reach both.
+- **Whether the static GTFS may be used in a commercial fork.** The dataset
+  page does not say, so the answer is currently "do not".
+- **Whether a shared backend is acceptable.** Serving cached upstream data to
+  many users is further from "personal use" than an app that queries the
+  upstream itself. leoforio keeps the responses in a short in-memory cache
+  and never persists them, which is the most conservative version of that
+  pattern, but the question should be put to OASA rather than assumed.
 - The dataset also publishes a `.rar` copy of the feed; the `.zip` copy is
   used.
 

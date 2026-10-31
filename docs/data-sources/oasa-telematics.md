@@ -126,9 +126,19 @@ is what the map draws.
 
 - Positional parameters only. `stopID=10175` is silently ignored and the
   service answers `{"error":"nothing requested"}`.
+- An error may arrive where a list was expected: `{"error":"nothing requested"}`
+  is a valid answer to a request with an unknown action or missing
+  parameters. The client detects that shape and reports it as an upstream
+  error rather than a decoding failure.
+- **Field types drift without notice.** The service is undocumented and has
+  changed identifiers such as `route_code`, `btime2` and `StopCode` from
+  strings to numbers and back. Every field is therefore read leniently, as a
+  string or a number, and identifiers are never coerced to numbers: `StopID`
+  keeps a significant leading zero (`060134`) where `StopCode` is `60134`.
 - `CS_DATE` uses the format `Oct 31 2026 10:19:23:000PM`: a millisecond field
   glued to the AM/PM marker, and no timezone. Values are Europe/Athens local
-  time and need a custom parser rather than a standard layout.
+  time and need a custom parser rather than a standard layout. Athens is on
+  UTC+2 in winter and UTC+3 in summer.
 - `btime2` is a string, and the count is minutes, not seconds.
 - Real-time information is temporarily unavailable on some lines; the official
   site carries a notice about it. Empty arrays are a normal response, not an
@@ -138,6 +148,36 @@ is what the map draws.
 - Stop identifiers differ between this API and the official GTFS feed, see
   [oasa-gtfs.md](./oasa-gtfs.md).
 - The service is reachable over HTTPS only; plain HTTP requests time out.
+
+## Operational notes
+
+These are the failure modes that actually bite, and what leoforio does about
+each one.
+
+- **The service is only reachable from Greece.** Requests from outside the
+  country are dropped without an answer. The backend therefore has to run on
+  a Greek IP address, which is a hosting constraint rather than a coding
+  one, see [ADR 0008](../adr/0008-greek-ip-deployment.md).
+- **The operator rate limits.** A `403` or `429` answer is treated as a
+  rejection: the client stops talking to the upstream for ten minutes instead
+  of retrying into a longer ban, and the cache keeps serving the last known
+  values meanwhile. Other failures are retried twice with a doubling delay.
+- **The whole service can disappear.** In late August 2026 the telematics
+  system was taken down for several days by a cyberattack, taking the
+  official app, the website and the station displays with it. The app must
+  degrade to "no live data" rather than fail, and the cache holds the last
+  known state for that reason.
+- **The DNS answer is worth watching.** `telematics.oasa.gr` currently
+  resolves to `195.46.22.91`, which works from Greece; community reports
+  describe that address dropping packets at times, and the operator's
+  addresses sit in a small range. A future maintainer who sees unexplained
+  timeouts should try the other addresses in that range, keeping the
+  hostname for TLS.
+- **There is no published changelog and no schema.** A CI job that runs the
+  live test against the upstream and fails when the shape changes is the
+  only reliable way to notice a schema shift. The contract tests in
+  `backend/internal/source/oasa` run against the captured fixtures and fail
+  the moment the adapter stops matching them.
 
 ## Change log
 

@@ -38,6 +38,8 @@ needs re-capture), `blocked` (terms or access prevent use).
 | 2026-10-31 | Live positions come from the public `getBusLocation` endpoint, so the research phase is not needed | [ADR 0007](../adr/0007-positions-gate.md), [oasa-telematics.md](./oasa-telematics.md) |
 | 2026-10-31 | Timetables come from `getSchedLines`, because the GTFS service calendar expired on 2026-10-06 | [oasa-gtfs.md](./oasa-gtfs.md) |
 | 2026-10-31 | The project stays non-commercial: OASA's terms allow personal use only | [oasa-telematics.md](./oasa-telematics.md) |
+| 2026-10-31 | Written permission is requested from OASA, in parallel with development | [permission-request.md](../permission-request.md) |
+| 2026-10-31 | The backend is deployed on a Greek IP address, because the upstream is only reachable from Greece | [ADR 0008](../adr/0008-greek-ip-deployment.md) |
 | _pending_ | _e.g. arrivals adapter targets the Telematics API_ | _section in oasa-telematics.md_ |
 
 ## Conventions

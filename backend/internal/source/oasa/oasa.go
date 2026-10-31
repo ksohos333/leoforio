@@ -2,22 +2,13 @@ package oasa
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sort"
 	"strconv"
-	"strings"
 	"time"
-
-	// The timezone database is embedded so that the binary behaves the same
-	// on a host without the system zoneinfo files.
-	_ "time/tzdata"
 
 	"github.com/ksohos333/leoforio/backend/internal/model"
 )
-
-// ErrRequestFailed means the upstream call did not succeed.
-var ErrRequestFailed = errors.New("oasa: request failed")
 
 // athens is the timezone the upstream timestamps are expressed in.
 //
@@ -45,72 +36,19 @@ func New(client *Client) *Source {
 	return &Source{client: client, now: time.Now}
 }
 
-type lineDTO struct {
-	LineCode    string `json:"LineCode"`
-	LineID      string `json:"LineID"`
-	LineDescr   string `json:"LineDescr"`
-	LineDescrEn string `json:"LineDescrEng"`
-}
-
-type routeDTO struct {
-	RouteCode     string `json:"RouteCode"`
-	LineCode      string `json:"LineCode"`
-	RouteDescr    string `json:"RouteDescr"`
-	RouteDescrEn  string `json:"RouteDescrEng"`
-	RouteType     string `json:"RouteType"`
-	RouteDistance string `json:"RouteDistance"`
-}
-
-type stopDTO struct {
-	StopCode       string `json:"StopCode"`
-	StopID         string `json:"StopID"`
-	StopDescr      string `json:"StopDescr"`
-	StopDescrEn    string `json:"StopDescrEng"`
-	StopStreet     string `json:"StopStreet"`
-	StopStreetEn   string `json:"StopStreetEng"`
-	StopHeading    string `json:"StopHeading"`
-	StopLat        string `json:"StopLat"`
-	StopLng        string `json:"StopLng"`
-	RouteStopOrder string `json:"RouteStopOrder"`
-}
-
-type arrivalDTO struct {
-	RouteCode string `json:"route_code"`
-	VehicleID string `json:"veh_code"`
-	Minutes   string `json:"btime2"`
-}
-
-type positionDTO struct {
-	VehicleID  string `json:"VEH_NO"`
-	RecordedAt string `json:"CS_DATE"`
-	Latitude   string `json:"CS_LAT"`
-	Longitude  string `json:"CS_LNG"`
-	RouteCode  string `json:"ROUTE_CODE"`
-	Heading    string `json:"VEH_HEADING"`
-}
-
-type routeDetailsDTO struct {
-	Details []struct {
-		Longitude string `json:"routed_x"`
-		Latitude  string `json:"routed_y"`
-		Order     string `json:"routed_order"`
-	} `json:"details"`
-	Stops []stopDTO `json:"stops"`
-}
-
 // Lines returns every line published by the operator.
 func (s *Source) Lines(ctx context.Context) ([]model.Line, error) {
-	var payload []lineDTO
-	if err := s.client.get(ctx, "webGetLines", nil, &payload); err != nil {
+	payload, err := s.client.list(ctx, "webGetLines", nil)
+	if err != nil {
 		return nil, err
 	}
 
 	lines := make([]model.Line, 0, len(payload))
 	for _, item := range payload {
 		lines = append(lines, model.Line{
-			ID:   item.LineCode,
-			Code: item.LineID,
-			Name: item.LineDescr,
+			ID:   item.str("LineCode"),
+			Code: item.str("LineID"),
+			Name: item.str("LineDescr"),
 		})
 	}
 	return lines, nil
@@ -118,18 +56,18 @@ func (s *Source) Lines(ctx context.Context) ([]model.Line, error) {
 
 // Routes returns the routes that belong to a line.
 func (s *Source) Routes(ctx context.Context, lineCode string) ([]model.Route, error) {
-	var payload []routeDTO
-	if err := s.client.get(ctx, "webGetRoutes", []string{lineCode}, &payload); err != nil {
+	payload, err := s.client.list(ctx, "webGetRoutes", []string{lineCode})
+	if err != nil {
 		return nil, err
 	}
 
 	routes := make([]model.Route, 0, len(payload))
 	for _, item := range payload {
 		routes = append(routes, model.Route{
-			ID:        item.RouteCode,
-			LineID:    item.LineCode,
-			Direction: item.RouteDescr,
-			Name:      item.RouteDescrEn,
+			ID:        item.str("RouteCode"),
+			LineID:    item.str("LineCode"),
+			Direction: item.str("RouteDescr"),
+			Name:      item.str("RouteDescrEng"),
 		})
 	}
 	return routes, nil
@@ -138,8 +76,8 @@ func (s *Source) Routes(ctx context.Context, lineCode string) ([]model.Route, er
 // RouteStops returns the stops of a route, in the order the operator lists
 // them.
 func (s *Source) RouteStops(ctx context.Context, routeCode string) ([]model.Stop, error) {
-	var payload []stopDTO
-	if err := s.client.get(ctx, "webGetStops", []string{routeCode}, &payload); err != nil {
+	payload, err := s.client.list(ctx, "webGetStops", []string{routeCode})
+	if err != nil {
 		return nil, err
 	}
 	return toStops(payload), nil
@@ -147,8 +85,8 @@ func (s *Source) RouteStops(ctx context.Context, routeCode string) ([]model.Stop
 
 // RouteGeometry returns the path of a route as ordered points.
 func (s *Source) RouteGeometry(ctx context.Context, routeCode string) ([]model.Position, error) {
-	var payload routeDetailsDTO
-	if err := s.client.get(ctx, "webGetRoutesDetailsAndStops", []string{routeCode}, &payload); err != nil {
+	payload, err := s.client.object(ctx, "webGetRoutesDetailsAndStops", []string{routeCode})
+	if err != nil {
 		return nil, err
 	}
 
@@ -156,17 +94,19 @@ func (s *Source) RouteGeometry(ctx context.Context, routeCode string) ([]model.P
 		order    int
 		position model.Position
 	}
-	points := make([]point, 0, len(payload.Details))
-	for _, item := range payload.Details {
-		latitude, err := strconv.ParseFloat(item.Latitude, 64)
+
+	details := splitList(payload["details"])
+	points := make([]point, 0, len(details))
+	for _, item := range details {
+		latitude, err := strconv.ParseFloat(trim(item.str("routed_y")), 64)
 		if err != nil {
 			continue
 		}
-		longitude, err := strconv.ParseFloat(item.Longitude, 64)
+		longitude, err := strconv.ParseFloat(trim(item.str("routed_x")), 64)
 		if err != nil {
 			continue
 		}
-		order, err := strconv.Atoi(item.Order)
+		order, err := strconv.Atoi(trim(item.str("routed_order")))
 		if err != nil {
 			order = len(points)
 		}
@@ -187,23 +127,24 @@ func (s *Source) RouteGeometry(ctx context.Context, routeCode string) ([]model.P
 
 // Arrivals returns the expected arrivals at a stop.
 func (s *Source) Arrivals(ctx context.Context, stopCode string) ([]model.Arrival, error) {
-	var payload []arrivalDTO
-	if err := s.client.get(ctx, "getStopArrivals", []string{stopCode}, &payload); err != nil {
+	payload, err := s.client.list(ctx, "getStopArrivals", []string{stopCode})
+	if err != nil {
 		return nil, err
 	}
 
 	now := s.now()
 	arrivals := make([]model.Arrival, 0, len(payload))
 	for _, item := range payload {
-		minutes, err := strconv.Atoi(strings.TrimSpace(item.Minutes))
+		minutes, err := strconv.Atoi(trim(item.str("btime2")))
 		if err != nil {
 			continue
 		}
+		routeCode := item.str("route_code")
 		arrivals = append(arrivals, model.Arrival{
 			StopID:    stopCode,
-			LineID:    item.RouteCode,
-			RouteID:   item.RouteCode,
-			VehicleID: item.VehicleID,
+			LineID:    routeCode,
+			RouteID:   routeCode,
+			VehicleID: item.str("veh_code"),
 			Expected:  now.Add(time.Duration(minutes) * time.Minute),
 		})
 	}
@@ -212,31 +153,31 @@ func (s *Source) Arrivals(ctx context.Context, stopCode string) ([]model.Arrival
 
 // Positions returns the last known positions of the vehicles on a route.
 func (s *Source) Positions(ctx context.Context, routeCode string) ([]model.VehiclePosition, error) {
-	var payload []positionDTO
-	if err := s.client.get(ctx, "getBusLocation", []string{routeCode}, &payload); err != nil {
+	payload, err := s.client.list(ctx, "getBusLocation", []string{routeCode})
+	if err != nil {
 		return nil, err
 	}
 
 	positions := make([]model.VehiclePosition, 0, len(payload))
 	for _, item := range payload {
-		latitude, err := strconv.ParseFloat(item.Latitude, 64)
+		latitude, err := strconv.ParseFloat(trim(item.str("CS_LAT")), 64)
 		if err != nil {
 			continue
 		}
-		longitude, err := strconv.ParseFloat(item.Longitude, 64)
+		longitude, err := strconv.ParseFloat(trim(item.str("CS_LNG")), 64)
 		if err != nil {
 			continue
 		}
-		recordedAt, err := parseUpstreamTime(item.RecordedAt)
+		recordedAt, err := parseUpstreamTime(item.str("CS_DATE"))
 		if err != nil {
 			continue
 		}
-		heading, _ := strconv.Atoi(strings.TrimSpace(item.Heading))
+		heading, _ := strconv.Atoi(trim(item.str("VEH_HEADING")))
 
 		positions = append(positions, model.VehiclePosition{
-			VehicleID:  item.VehicleID,
-			LineID:     item.RouteCode,
-			RouteID:    item.RouteCode,
+			VehicleID:  item.str("VEH_NO"),
+			LineID:     item.str("ROUTE_CODE"),
+			RouteID:    item.str("ROUTE_CODE"),
 			Position:   model.Position{Latitude: latitude, Longitude: longitude},
 			Heading:    heading,
 			RecordedAt: recordedAt,
@@ -245,15 +186,15 @@ func (s *Source) Positions(ctx context.Context, routeCode string) ([]model.Vehic
 	return positions, nil
 }
 
-func toStops(payload []stopDTO) []model.Stop {
+func toStops(payload []object) []model.Stop {
 	stops := make([]model.Stop, 0, len(payload))
 	for _, item := range payload {
-		latitude, _ := strconv.ParseFloat(item.StopLat, 64)
-		longitude, _ := strconv.ParseFloat(item.StopLng, 64)
+		latitude, _ := strconv.ParseFloat(trim(item.str("StopLat")), 64)
+		longitude, _ := strconv.ParseFloat(trim(item.str("StopLng")), 64)
 		stops = append(stops, model.Stop{
-			ID:        item.StopCode,
-			Code:      item.StopID,
-			Name:      item.StopDescr,
+			ID:        item.str("StopCode"),
+			Code:      item.str("StopID"),
+			Name:      item.str("StopDescr"),
 			Latitude:  latitude,
 			Longitude: longitude,
 		})
@@ -265,11 +206,11 @@ func toStops(payload []stopDTO) []model.Stop {
 // example "Oct 31 2026 10:19:23:000PM": a millisecond field is glued to the
 // AM/PM marker and no timezone is given.
 func parseUpstreamTime(value string) (time.Time, error) {
-	trimmed := strings.TrimSpace(value)
+	trimmed := trim(value)
 
-	if index := strings.LastIndex(trimmed, ":"); index >= 0 {
+	if index := lastIndex(trimmed, ":"); index >= 0 {
 		tail := trimmed[index+1:]
-		if len(tail) >= 4 && (strings.HasSuffix(tail, "AM") || strings.HasSuffix(tail, "PM")) {
+		if len(tail) >= 4 && (hasSuffix(tail, "AM") || hasSuffix(tail, "PM")) {
 			trimmed = trimmed[:index] + tail[3:]
 		}
 	}
@@ -279,4 +220,17 @@ func parseUpstreamTime(value string) (time.Time, error) {
 		return time.Time{}, fmt.Errorf("oasa: parsing timestamp %q: %w", value, err)
 	}
 	return parsed, nil
+}
+
+func lastIndex(value, separator string) int {
+	for i := len(value) - len(separator); i >= 0; i-- {
+		if value[i:i+len(separator)] == separator {
+			return i
+		}
+	}
+	return -1
+}
+
+func hasSuffix(value, suffix string) bool {
+	return len(value) >= len(suffix) && value[len(value)-len(suffix):] == suffix
 }

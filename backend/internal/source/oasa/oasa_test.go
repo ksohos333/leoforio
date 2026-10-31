@@ -3,10 +3,13 @@ package oasa
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -222,6 +225,104 @@ func TestUpstreamErrorIsReported(t *testing.T) {
 	source := New(NewClient(server.URL))
 	if _, err := source.Arrivals(context.Background(), "10175"); err == nil {
 		t.Fatal("expected an error for a failing upstream")
+	}
+}
+
+// TestNumericFieldsAreAccepted covers the upstream changing a field from a
+// string to a number without notice.
+func TestNumericFieldsAreAccepted(t *testing.T) {
+	server := stubServer(t, []byte(`[{"route_code": 2484, "veh_code": 12237, "btime2": 16}]`), nil)
+
+	source := New(NewClient(server.URL))
+	fixed := time.Date(2026, 10, 31, 21, 0, 0, 0, time.UTC)
+	source.now = func() time.Time { return fixed }
+
+	arrivals, err := source.Arrivals(context.Background(), "10175")
+	if err != nil {
+		t.Fatalf("arrivals failed: %v", err)
+	}
+	if len(arrivals) != 1 {
+		t.Fatalf("expected 1 arrival, got %d", len(arrivals))
+	}
+	if arrivals[0].RouteID != "2484" {
+		t.Errorf("expected route 2484, got %q", arrivals[0].RouteID)
+	}
+	if arrivals[0].VehicleID != "12237" {
+		t.Errorf("expected vehicle 12237, got %q", arrivals[0].VehicleID)
+	}
+	if !arrivals[0].Expected.Equal(fixed.Add(16 * time.Minute)) {
+		t.Errorf("expected arrival at %s, got %s", fixed.Add(16*time.Minute), arrivals[0].Expected)
+	}
+}
+
+func TestNumericPositionsAreAccepted(t *testing.T) {
+	server := stubServer(t, []byte(`[{
+		"VEH_NO": 12237,
+		"CS_DATE": "Oct 31 2026 10:19:23:000PM",
+		"CS_LAT": 37.988269,
+		"CS_LNG": 23.746624,
+		"ROUTE_CODE": 2484,
+		"VEH_HEADING": 247
+	}]`), nil)
+
+	source := New(NewClient(server.URL))
+	positions, err := source.Positions(context.Background(), "2484")
+	if err != nil {
+		t.Fatalf("positions failed: %v", err)
+	}
+	if len(positions) != 1 {
+		t.Fatalf("expected 1 position, got %d", len(positions))
+	}
+	if positions[0].VehicleID != "12237" {
+		t.Errorf("expected vehicle 12237, got %q", positions[0].VehicleID)
+	}
+	if positions[0].Position.Latitude != 37.988269 {
+		t.Errorf("unexpected latitude %v", positions[0].Position.Latitude)
+	}
+	if positions[0].Heading != 247 {
+		t.Errorf("expected heading 247, got %d", positions[0].Heading)
+	}
+}
+
+// TestUpstreamErrorObjectIsReported covers the upstream answering with an
+// error object where a list was expected.
+func TestUpstreamErrorObjectIsReported(t *testing.T) {
+	server := stubServer(t, []byte(`{"error":"nothing requested"}`), nil)
+
+	source := New(NewClient(server.URL))
+	_, err := source.Arrivals(context.Background(), "10175")
+	if err == nil {
+		t.Fatal("expected an error for an upstream error object")
+	}
+	if !errors.Is(err, ErrUpstreamError) {
+		t.Errorf("expected an upstream error, got %v", err)
+	}
+	if !strings.Contains(err.Error(), "nothing requested") {
+		t.Errorf("expected the upstream message in %v", err)
+	}
+}
+
+// TestRejectionStopsFurtherRequests covers the operator rate limiting the
+// client: the next calls must fail fast instead of hammering the upstream.
+func TestRejectionStopsFurtherRequests(t *testing.T) {
+	var calls atomic.Int64
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		calls.Add(1)
+		w.WriteHeader(http.StatusTooManyRequests)
+	}))
+	t.Cleanup(server.Close)
+
+	source := New(NewClient(server.URL))
+
+	if _, err := source.Positions(context.Background(), "2484"); !errors.Is(err, ErrRejected) {
+		t.Fatalf("expected a rejection, got %v", err)
+	}
+	if _, err := source.Positions(context.Background(), "2484"); !errors.Is(err, ErrRejected) {
+		t.Fatalf("expected a rejection, got %v", err)
+	}
+
+	if got := calls.Load(); got != 1 {
+		t.Errorf("expected the client to stop after one rejection, got %d calls", got)
 	}
 }
 
