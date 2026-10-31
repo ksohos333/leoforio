@@ -1,0 +1,51 @@
+name: Wishlist
+description: Tell me what would actually help you know when your bus is coming.
+title: "[wishlist] "
+labels: ["wishlist"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This project is still early. The most useful thing you can do is
+        describe the situation you are in when you wait for a bus, so the
+        build targets the real pain instead of an imagined one.
+
+  - type: textarea
+    id: situation
+    attributes:
+      label: Where does this happen to you?
+      description: The stop, the line, the time of day, the weather.
+      placeholder: |
+        Stop on 5th Avenue around 08:00, line 815 towards the centre, in the rain.
+    validations:
+      required: true
+
+  - type: textarea
+    id: missing
+    attributes:
+      label: What do you do today to find out when the bus comes?
+      description: App, website, phone call, asking a stranger, waiting.
+    validations:
+      required: true
+
+  - type: textarea
+    id: wish
+    attributes:
+      label: What is still missing?
+      description: What would have to be true for this to be useful to you?
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: features
+    attributes:
+      label: Which of these would matter to you?
+      options:
+        - label: Live position of the bus on a map
+        - label: Accurate arrival time for my stop
+        - label: A timetable that is actually readable
+        - label: Alarms and notifications when my bus is close
+        - label: Works offline
+        - label: Dark mode and accessibility
+        - label: Greek language interface
+        - label: Coverage beyond Athens

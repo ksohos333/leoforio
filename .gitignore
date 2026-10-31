@@ -1,0 +1,15 @@
+# OS
+.DS_Store
+
+# Local environment
+.env
+.env.local
+
+# Editor
+.idea/
+.vscode/
+
+# Build output
+*.apk
+*.aab
+coverage.out

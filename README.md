@@ -4,6 +4,20 @@
 
 Open app for Greek public transport, starting with Athens (OASA network). **Status: idea stage** — deliberately on the back burner while I build my main project. This repo exists to timestamp the idea, capture the plan, and gather signal from others who share the pain.
 
+## Repository
+
+| Path | Purpose |
+|---|---|
+| [`backend/`](backend/README.md) | Go service: upstream adapters, polite caching, versioned JSON API |
+| [`mobile/`](mobile/README.md) | React Native app (MapLibre Native over OpenStreetMap tiles) |
+| [`docs/adr/`](docs/adr/) | architecture decision records |
+| [`docs/data-sources/`](docs/data-sources/README.md) | every upstream data source, its terms and its captured fixtures |
+
+The app never calls an upstream operator directly: all upstream access lives
+behind adapters in the backend, so that a broken or changed upstream degrades
+one service instead of every user's phone. See
+[ADR 0004](docs/adr/0004-app-never-calls-upstream.md).
+
 ## The problem
 
 Most people in Greece have no idea when the bus is coming. On a good day you might know half the time. The official tools exist but feel like a punishment: cluttered interfaces, routes that are hard to read, no real sense of "where is my bus right now."
