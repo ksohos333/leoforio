@@ -33,12 +33,33 @@ export function LiveMapScreen({ route }: LiveMapScreenProps) {
 
   return (
     <View style={styles.container}>
-      <VehicleMap
-        geometry={geometry.data}
-        vehicles={liveVehicles}
-        stops={stops.data ?? []}
-      />
-      <View style={[styles.status, { bottom: insets.bottom + 16 }]}>
+      <View
+        style={[
+          StyleSheet.absoluteFill,
+          {
+            // The map runs under the system bars; the body of the app is
+            // inset to keep the controls clear of them.
+            marginLeft: -insets.left,
+            marginRight: -insets.right,
+          },
+        ]}
+      >
+        <VehicleMap
+          geometry={geometry.data}
+          vehicles={liveVehicles}
+          stops={stops.data ?? []}
+        />
+      </View>
+      <View
+        style={[
+          styles.status,
+          {
+            bottom: insets.bottom + 16,
+            left: insets.left + 16,
+            right: insets.right + 16,
+          },
+        ]}
+      >
         {vehicles.isError ? (
           <Text style={styles.statusText}>
             Live positions are unavailable right now.
