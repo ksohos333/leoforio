@@ -1,3 +1,4 @@
+import Geolocation from '@react-native-community/geolocation';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import {
@@ -129,9 +130,7 @@ export function SearchScreen({ onSelect }: SearchScreenProps) {
 
 function currentPosition(): Promise<{ coords: { latitude: number; longitude: number } }> {
   return new Promise((resolve, reject) => {
-    // Loaded lazily so that the module is only needed on a device.
-    const geolocation = require('@react-native-community/geolocation');
-    geolocation.getCurrentPosition(
+    Geolocation.getCurrentPosition(
       resolve,
       (error: { message?: string } | undefined) =>
         reject(new Error(error?.message ?? 'The location is unavailable.')),
