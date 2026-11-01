@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
   },
   tabs: {
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingTop: 10,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: '#d8dce2',
   },
