@@ -141,6 +141,30 @@ func TestPositionsFromFixture(t *testing.T) {
 	}
 }
 
+func TestRoutesForStopFromFixture(t *testing.T) {
+	server := stubServer(t, fixtureBody(t, "webRoutesForStop"), nil)
+
+	source := New(NewClient(server.URL))
+	routes, err := source.RoutesForStop(context.Background(), "10175")
+	if err != nil {
+		t.Fatalf("routes for stop failed: %v", err)
+	}
+	if len(routes) != 2 {
+		t.Fatalf("expected 2 routes in the trimmed fixture, got %d", len(routes))
+	}
+
+	first := routes[0]
+	if first.ID != "2484" {
+		t.Errorf("expected route 2484, got %q", first.ID)
+	}
+	if first.LineNumber != "021" {
+		t.Errorf("expected the line number 021, got %q", first.LineNumber)
+	}
+	if first.LineName == "" {
+		t.Error("expected a line name")
+	}
+}
+
 func TestRouteStopsFromFixture(t *testing.T) {
 	server := stubServer(t, fixtureBody(t, "webGetStops"), nil)
 
@@ -202,6 +226,11 @@ func TestParseUpstreamTime(t *testing.T) {
 		{
 			input: "Jul 13 2016 11:05:32:000PM",
 			want:  time.Date(2016, 7, 13, 20, 5, 32, 0, time.UTC),
+		},
+		{
+			// A single digit day is written with two spaces.
+			input: "Nov  1 2026 02:47:27:000AM",
+			want:  time.Date(2026, 11, 1, 0, 47, 27, 0, time.UTC),
 		},
 	}
 
@@ -286,6 +315,22 @@ func TestNumericPositionsAreAccepted(t *testing.T) {
 
 // TestUpstreamErrorObjectIsReported covers the upstream answering with an
 // error object where a list was expected.
+// TestEmptyStringResponseIsAnEmptyList covers the upstream answering with an
+// empty string when a query has no results.
+func TestEmptyStringResponseIsAnEmptyList(t *testing.T) {
+	server := stubServer(t, []byte(`""`), nil)
+
+	source := New(NewClient(server.URL))
+
+	positions, err := source.Positions(context.Background(), "2484")
+	if err != nil {
+		t.Fatalf("expected an empty result rather than an error, got %v", err)
+	}
+	if len(positions) != 0 {
+		t.Errorf("expected no positions, got %d", len(positions))
+	}
+}
+
 func TestUpstreamErrorObjectIsReported(t *testing.T) {
 	server := stubServer(t, []byte(`{"error":"nothing requested"}`), nil)
 

@@ -42,6 +42,7 @@ type PositionsSource interface {
 type NetworkSource interface {
 	Lines(ctx context.Context) ([]model.Line, error)
 	Routes(ctx context.Context, lineCode string) ([]model.Route, error)
+	RoutesForStop(ctx context.Context, stopCode string) ([]model.Route, error)
 	RouteStops(ctx context.Context, routeCode string) ([]model.Stop, error)
 	RouteGeometry(ctx context.Context, routeCode string) ([]model.Position, error)
 }

@@ -1,12 +1,15 @@
 import { useQuery } from '@tanstack/react-query';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { api } from '../api/client';
-import type { Stop } from '../api/types';
+import type { Arrival, Route, Stop } from '../api/types';
 import { config } from '../config';
 
 interface StopScreenProps {
   stop: Stop;
+  isFavourite: boolean;
+  onToggleFavourite: () => void;
+  onSelectRoute: (route: Route) => void;
 }
 
 /**
@@ -16,7 +19,12 @@ interface StopScreenProps {
  * sometimes has nothing to report for a stop. Both cases are shown as they
  * are: the screen never invents an arrival.
  */
-export function StopScreen({ stop }: StopScreenProps) {
+export function StopScreen({
+  stop,
+  isFavourite,
+  onToggleFavourite,
+  onSelectRoute,
+}: StopScreenProps) {
   const arrivals = useQuery({
     queryKey: ['arrivals', stop.id],
     queryFn: () => api.arrivals(stop.id),
@@ -28,8 +36,19 @@ export function StopScreen({ stop }: StopScreenProps) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.name}>{stop.name}</Text>
-        <Text style={styles.code}>stop {stop.code}</Text>
+        <View style={styles.headerText}>
+          <Text style={styles.name}>{stop.name}</Text>
+          <Text style={styles.code}>stop {stop.code}</Text>
+        </View>
+        <Pressable
+          style={styles.favourite}
+          onPress={onToggleFavourite}
+          accessibilityRole="button"
+          accessibilityLabel={
+            isFavourite ? 'Remove from my stops' : 'Add to my stops'
+          }>
+          <Text style={styles.favouriteText}>{isFavourite ? '★' : '☆'}</Text>
+        </Pressable>
       </View>
 
       {arrivals.isError ? (
@@ -47,12 +66,22 @@ export function StopScreen({ stop }: StopScreenProps) {
       ) : (
         <View style={styles.list}>
           {expected.map((arrival, index) => (
-            <View key={`${arrival.routeId}-${arrival.vehicleId}-${index}`} style={styles.row}>
-              <Text style={styles.route}>{arrival.routeId}</Text>
-              <Text style={styles.minutes}>
-                {minutesUntil(arrival.expected)}
-              </Text>
-            </View>
+            <Pressable
+              key={`${arrival.routeId}-${arrival.vehicleId}-${index}`}
+              style={styles.row}
+              onPress={() => onSelectRoute(routeFor(arrival))}
+              accessibilityRole="button"
+              accessibilityLabel={`Show the line on the map`}>
+              <View style={styles.rowText}>
+                <Text style={styles.route}>{arrival.lineId || arrival.routeId}</Text>
+                {arrival.lineName ? (
+                  <Text style={styles.lineName} numberOfLines={1}>
+                    {arrival.lineName}
+                  </Text>
+                ) : null}
+              </View>
+              <Text style={styles.minutes}>{minutesUntil(arrival.expected)}</Text>
+            </Pressable>
           ))}
           <Text style={styles.updated}>
             updated {new Date(arrivals.dataUpdatedAt).toLocaleTimeString()}
@@ -64,8 +93,23 @@ export function StopScreen({ stop }: StopScreenProps) {
 }
 
 /**
+ * Builds the route an arrival runs on, so that the map can show it.
+ */
+function routeFor(arrival: Arrival): Route {
+  return {
+    id: arrival.routeId,
+    lineId: arrival.lineId ?? '',
+    lineNumber: arrival.lineId,
+    direction: arrival.lineName ?? '',
+    name: arrival.lineName ?? '',
+    lineName: arrival.lineName,
+    stopIds: null,
+  };
+}
+
+/**
  * Formats the remaining time as a whole number of minutes, rounded up, so
- * that a bus that is due now reads as "now" rather than "0 min ago".
+ * that a bus that is due now reads as "due now" rather than "0 min ago".
  */
 function minutesUntil(expected: string): string {
   const milliseconds = new Date(expected).getTime() - Date.now();
@@ -85,11 +129,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: '#d8dce2',
+  },
+  headerText: {
+    flex: 1,
   },
   name: {
     fontSize: 18,
@@ -100,6 +149,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#7b8794',
     marginTop: 2,
+  },
+  favourite: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+  },
+  favouriteText: {
+    fontSize: 24,
+    color: '#f0a500',
   },
   list: {
     paddingHorizontal: 16,
@@ -113,9 +170,18 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: '#eceff2',
   },
+  rowText: {
+    flex: 1,
+    paddingRight: 12,
+  },
   route: {
     fontSize: 16,
     color: '#1f2933',
+  },
+  lineName: {
+    fontSize: 12,
+    color: '#7b8794',
+    marginTop: 2,
   },
   minutes: {
     fontSize: 18,

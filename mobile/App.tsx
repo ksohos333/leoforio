@@ -10,6 +10,7 @@ import {
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import type { Line, Route, Stop } from './src/api/types';
+import { useFavourites } from './src/favourites/useFavourites';
 import { CreditsScreen } from './src/screens/CreditsScreen';
 import { LinesScreen } from './src/screens/LinesScreen';
 import { LiveMapScreen } from './src/screens/LiveMapScreen';
@@ -37,6 +38,7 @@ type Screen =
 function App() {
   const [stack, setStack] = useState<Screen[]>([{ name: 'search' }]);
   const screen = stack[stack.length - 1];
+  const favourites = useFavourites();
 
   const push = (next: Screen) => setStack(current => [...current, next]);
   const back = () =>
@@ -88,9 +90,38 @@ function App() {
 
           <View style={styles.body}>
             {screen.name === 'search' ? (
-              <SearchScreen onSelect={stop => push({ name: 'stop', stop })} />
+              <SearchScreen
+                favourites={favourites.favourites}
+                onSelect={stop => push({ name: 'stop', stop })}
+                onSelectFavourite={favourite =>
+                  push({
+                    name: 'stop',
+                    stop: {
+                      id: favourite.id,
+                      code: '',
+                      name: favourite.name,
+                      lat: favourite.lat,
+                      lon: favourite.lon,
+                    },
+                  })
+                }
+                onRemoveFavourite={favourites.remove}
+              />
             ) : null}
-            {screen.name === 'stop' ? <StopScreen stop={screen.stop} /> : null}
+            {screen.name === 'stop' ? (
+              <StopScreen
+                stop={screen.stop}
+                isFavourite={favourites.has(screen.stop.id)}
+                onToggleFavourite={() => {
+                  if (favourites.has(screen.stop.id)) {
+                    favourites.remove(screen.stop.id);
+                  } else {
+                    favourites.add(screen.stop);
+                  }
+                }}
+                onSelectRoute={route => push({ name: 'map', route })}
+              />
+            ) : null}
             {screen.name === 'lines' ? (
               <LinesScreen onSelect={line => push({ name: 'routes', line })} />
             ) : null}

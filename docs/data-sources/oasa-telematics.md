@@ -52,7 +52,7 @@ curl -X POST 'https://telematics.oasa.gr/api/?act=getStopArrivals&p1=10175'
 | `webGetLinesWithMLInfo` | – | lines plus `ml_code`, `sdc_code`, `mld_master` | `webGetLinesWithMLInfo.json` |
 | `webGetRoutes` | `p1=LineCode` | routes of a line: `RouteCode`, `RouteDescr`, `RouteType`, `RouteDistance` | `webGetRoutes.json` |
 | `webGetStops` | `p1=RouteCode` | stops of a route with coordinates and order | `webGetStops.json` |
-| `webRoutesForStop` | `p1=StopCode` | routes serving a stop | `webRoutesForStop.json` |
+| `webRoutesForStop` | `p1=StopCode` | routes serving a stop, with the line number riders see | `webRoutesForStop.json` |
 | `getStopNameAndXY` | `p1=StopCode` | stop name, coordinates, heading | `getStopNameAndXY.json` |
 | `getStopArrivals` | `p1=StopCode` | **live arrivals** for a stop | `getStopArrivals.json` |
 | `getBusLocation` | `p1=RouteCode` | **live vehicle positions** for a route | `getBusLocation.json` |
@@ -143,6 +143,11 @@ is what the map draws.
 - Real-time information is temporarily unavailable on some lines; the official
   site carries a notice about it. Empty arrays are a normal response, not an
   error.
+- **A query with no results can answer with an empty string** rather than an
+  empty array: `getBusLocation` for a route with no vehicles returns `""`. The
+  client reads that as an empty result, not as a failure.
+- A single digit day is written with two spaces, as in `Nov  1 2026`, so the
+  timestamp parser has to accept both `Nov 1 2026` and `Nov  1 2026`.
 - There is no GTFS-RT equivalent in this API: realtime data exists only as
   arrivals per stop and positions per route.
 - Stop identifiers differ between this API and the official GTFS feed, see

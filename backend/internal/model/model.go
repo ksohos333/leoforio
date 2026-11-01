@@ -20,13 +20,18 @@ type Line struct {
 }
 
 // Route is an ordered sequence of stops belonging to a line direction.
+//
+// LineID is the identifier the upstream uses for the line, LineNumber is the
+// number a rider sees on the sign, for example 021.
 type Route struct {
-	ID        string     `json:"id"`
-	LineID    string     `json:"lineId"`
-	Direction string     `json:"direction"`
-	Name      string     `json:"name"`
-	StopIDs   []string   `json:"stopIds"`
-	Geometry  []Position `json:"geometry,omitempty"`
+	ID         string     `json:"id"`
+	LineID     string     `json:"lineId"`
+	LineNumber string     `json:"lineNumber,omitempty"`
+	Direction  string     `json:"direction"`
+	Name       string     `json:"name"`
+	LineName   string     `json:"lineName,omitempty"`
+	StopIDs    []string   `json:"stopIds"`
+	Geometry   []Position `json:"geometry,omitempty"`
 }
 
 // Stop is a boarding location.
@@ -40,11 +45,13 @@ type Stop struct {
 
 // Arrival is an expected arrival of a vehicle at a stop.
 //
-// The upstream publishes only the remaining minutes, so the expected time is
-// reconstructed from it. A scheduled time is set when the source knows one.
+// The upstream publishes only the remaining minutes and the route the vehicle
+// runs on, so the expected time is reconstructed from the minutes and the
+// line number is resolved from the routes that serve the stop.
 type Arrival struct {
 	StopID    string     `json:"stopId"`
-	LineID    string     `json:"lineId"`
+	LineID    string     `json:"lineId,omitempty"`
+	LineName  string     `json:"lineName,omitempty"`
 	RouteID   string     `json:"routeId"`
 	VehicleID string     `json:"vehicleId,omitempty"`
 	Scheduled *time.Time `json:"scheduled,omitempty"`

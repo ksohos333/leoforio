@@ -24,8 +24,7 @@ func (s *stubArrivals) Arrivals(_ context.Context, stopCode string) ([]model.Arr
 	}
 	return []model.Arrival{{
 		StopID:   stopCode,
-		LineID:   "815",
-		RouteID:  "815-A",
+		RouteID:  "2484",
 		Expected: time.Date(2026, 10, 31, 12, 0, 0, 0, time.UTC),
 	}}, nil
 }
@@ -55,6 +54,19 @@ func (s *stubNetwork) Lines(context.Context) ([]model.Line, error) {
 func (s *stubNetwork) Routes(_ context.Context, lineCode string) ([]model.Route, error) {
 	s.calls++
 	return []model.Route{{ID: "2484", LineID: lineCode, Name: "PLATEIA KANIGKOS"}}, nil
+}
+
+func (s *stubNetwork) RoutesForStop(_ context.Context, stopCode string) ([]model.Route, error) {
+	s.calls++
+	return []model.Route{
+		{
+			ID:         "2484",
+			LineID:     "1151",
+			LineNumber: "021",
+			Direction:  "ΠΛΑΤΕΙΑ ΚΑΝΙΓΓΟΣ - ΓΚΥΖΗ",
+			LineName:   "ΠΛΑΤΕΙΑ ΚΑΝΙΓΓΟΣ - ΓΚΥΖH (ΚΥΚΛΙΚΗ)",
+		},
+	}, nil
 }
 
 func (s *stubNetwork) RouteStops(_ context.Context, routeCode string) ([]model.Stop, error) {
@@ -277,6 +289,25 @@ func TestGeometryIsGeoJSON(t *testing.T) {
 	}
 	if !contains(body, "23.73153") {
 		t.Errorf("expected the coordinates in the response, got %s", body)
+	}
+}
+
+func TestArrivalsAreLabelledWithTheLineNumber(t *testing.T) {
+	arrivals := &stubArrivals{}
+	srv := New(Dependencies{Arrivals: arrivals, Network: &stubNetwork{}, Version: "test"})
+
+	rec := httptest.NewRecorder()
+	srv.Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/v1/stops/10175/arrivals", nil))
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+	body := rec.Body.String()
+	if !contains(body, "021") {
+		t.Errorf("expected the line number in the response, got %s", body)
+	}
+	if !contains(body, "ΚΑΝΙΓΓΟΣ") {
+		t.Errorf("expected the line name in the response, got %s", body)
 	}
 }
 

@@ -15,12 +15,22 @@ import {
 
 import { api } from '../api/client';
 import type { Stop } from '../api/types';
+import type { Favourite } from '../favourites/useFavourites';
+import { FavouriteStops } from './FavouriteStops';
 
 interface SearchScreenProps {
+  favourites: Favourite[];
   onSelect: (stop: Stop) => void;
+  onSelectFavourite: (favourite: Favourite) => void;
+  onRemoveFavourite: (id: string) => void;
 }
 
-export function SearchScreen({ onSelect }: SearchScreenProps) {
+export function SearchScreen({
+  favourites,
+  onSelect,
+  onSelectFavourite,
+  onRemoveFavourite,
+}: SearchScreenProps) {
   const [query, setQuery] = useState('');
   const [nearby, setNearby] = useState<Stop[] | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
@@ -89,6 +99,12 @@ export function SearchScreen({ onSelect }: SearchScreenProps) {
       {results.isFetching && query.trim().length > 1 ? (
         <ActivityIndicator style={styles.loading} />
       ) : null}
+
+      <FavouriteStops
+        favourites={favourites}
+        onSelect={onSelectFavourite}
+        onRemove={onRemoveFavourite}
+      />
 
       <FlatList
         data={stops}

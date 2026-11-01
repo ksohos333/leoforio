@@ -49,30 +49,32 @@ type Server struct {
 	version   string
 	startedAt time.Time
 
-	arrivalsCache  *cache.Cache[[]model.Arrival]
-	positionsCache *cache.Cache[[]model.VehiclePosition]
-	linesCache     *cache.Cache[[]model.Line]
-	routesCache    *cache.Cache[[]model.Route]
-	stopsCache     *cache.Cache[[]model.Stop]
-	geometryCache  *cache.Cache[[]model.Position]
+	arrivalsCache   *cache.Cache[[]model.Arrival]
+	positionsCache  *cache.Cache[[]model.VehiclePosition]
+	linesCache      *cache.Cache[[]model.Line]
+	routesCache     *cache.Cache[[]model.Route]
+	stopRoutesCache *cache.Cache[[]model.Route]
+	stopsCache      *cache.Cache[[]model.Stop]
+	geometryCache   *cache.Cache[[]model.Position]
 }
 
 // New returns a Server. Any dependency may be nil, in which case the
 // endpoints that depend on it report that the source is not configured.
 func New(dependencies Dependencies) *Server {
 	return &Server{
-		arrivals:       dependencies.Arrivals,
-		positions:      dependencies.Positions,
-		network:        dependencies.Network,
-		stops:          dependencies.Stops,
-		version:        dependencies.Version,
-		startedAt:      time.Now(),
-		arrivalsCache:  cache.New[[]model.Arrival](ArrivalsTTL),
-		positionsCache: cache.New[[]model.VehiclePosition](PositionsTTL),
-		linesCache:     cache.New[[]model.Line](NetworkStaticTTL),
-		routesCache:    cache.New[[]model.Route](NetworkStaticTTL),
-		stopsCache:     cache.New[[]model.Stop](NetworkStaticTTL),
-		geometryCache:  cache.New[[]model.Position](NetworkStaticTTL),
+		arrivals:        dependencies.Arrivals,
+		positions:       dependencies.Positions,
+		network:         dependencies.Network,
+		stops:           dependencies.Stops,
+		version:         dependencies.Version,
+		startedAt:       time.Now(),
+		arrivalsCache:   cache.New[[]model.Arrival](ArrivalsTTL),
+		positionsCache:  cache.New[[]model.VehiclePosition](PositionsTTL),
+		linesCache:      cache.New[[]model.Line](NetworkStaticTTL),
+		routesCache:     cache.New[[]model.Route](NetworkStaticTTL),
+		stopRoutesCache: cache.New[[]model.Route](NetworkStaticTTL),
+		stopsCache:      cache.New[[]model.Stop](NetworkStaticTTL),
+		geometryCache:   cache.New[[]model.Position](NetworkStaticTTL),
 	}
 }
 
@@ -309,7 +311,44 @@ func (s *Server) handleArrivals(w http.ResponseWriter, r *http.Request) {
 	if stale {
 		w.Header().Set("X-Cache", "stale")
 	}
-	writeJSON(w, http.StatusOK, arrivals)
+
+	writeJSON(w, http.StatusOK, s.labelArrivals(r.Context(), stopCode, arrivals))
+}
+
+// labelArrivals resolves the line number of every arrival.
+//
+// The upstream publishes the route a vehicle runs on, not the line, and the
+// route code is not what a rider sees on the sign. The routes that serve the
+// stop carry both, so one cached call labels every arrival.
+//
+// A failure to resolve the labels is not an error: the arrivals themselves
+// are still worth showing, and the client falls back to the route code.
+func (s *Server) labelArrivals(ctx context.Context, stopCode string, arrivals []model.Arrival) []model.Arrival {
+	if s.network == nil || len(arrivals) == 0 {
+		return arrivals
+	}
+
+	routes, _, err := s.stopRoutesCache.Get(ctx, "stop-routes:"+stopCode, func(ctx context.Context) ([]model.Route, error) {
+		return s.network.RoutesForStop(ctx, stopCode)
+	})
+	if err != nil {
+		return arrivals
+	}
+
+	labels := make(map[string]model.Route, len(routes))
+	for _, route := range routes {
+		labels[route.ID] = route
+	}
+
+	for i := range arrivals {
+		route, ok := labels[arrivals[i].RouteID]
+		if !ok {
+			continue
+		}
+		arrivals[i].LineID = route.LineNumber
+		arrivals[i].LineName = route.LineName
+	}
+	return arrivals
 }
 
 // geoJSON renders a route path as a GeoJSON LineString, which is what the

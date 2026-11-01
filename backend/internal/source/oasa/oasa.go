@@ -64,10 +64,36 @@ func (s *Source) Routes(ctx context.Context, lineCode string) ([]model.Route, er
 	routes := make([]model.Route, 0, len(payload))
 	for _, item := range payload {
 		routes = append(routes, model.Route{
-			ID:        item.str("RouteCode"),
-			LineID:    item.str("LineCode"),
-			Direction: item.str("RouteDescr"),
-			Name:      item.str("RouteDescrEng"),
+			ID:         item.str("RouteCode"),
+			LineID:     item.str("LineCode"),
+			LineNumber: item.str("LineID"),
+			Direction:  item.str("RouteDescr"),
+			Name:       item.str("RouteDescrEng"),
+			LineName:   item.str("LineDescr"),
+		})
+	}
+	return routes, nil
+}
+
+// RoutesForStop returns the routes that serve a stop.
+//
+// This is also how a route code is resolved to the line number a rider sees,
+// which is what the arrivals are labelled with.
+func (s *Source) RoutesForStop(ctx context.Context, stopCode string) ([]model.Route, error) {
+	payload, err := s.client.list(ctx, "webRoutesForStop", []string{stopCode})
+	if err != nil {
+		return nil, err
+	}
+
+	routes := make([]model.Route, 0, len(payload))
+	for _, item := range payload {
+		routes = append(routes, model.Route{
+			ID:         item.str("RouteCode"),
+			LineID:     item.str("LineCode"),
+			LineNumber: item.str("LineID"),
+			Direction:  item.str("RouteDescr"),
+			Name:       item.str("RouteDescrEng"),
+			LineName:   item.str("LineDescr"),
 		})
 	}
 	return routes, nil
@@ -142,7 +168,6 @@ func (s *Source) Arrivals(ctx context.Context, stopCode string) ([]model.Arrival
 		routeCode := item.str("route_code")
 		arrivals = append(arrivals, model.Arrival{
 			StopID:    stopCode,
-			LineID:    routeCode,
 			RouteID:   routeCode,
 			VehicleID: item.str("veh_code"),
 			Expected:  now.Add(time.Duration(minutes) * time.Minute),

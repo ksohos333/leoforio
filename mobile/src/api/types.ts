@@ -19,8 +19,10 @@ export interface Line {
 export interface Route {
   id: string;
   lineId: string;
+  lineNumber?: string;
   direction: string;
   name: string;
+  lineName?: string;
   stopIds: string[] | null;
 }
 
@@ -35,7 +37,8 @@ export interface Stop {
 
 export interface Arrival {
   stopId: string;
-  lineId: string;
+  lineId?: string;
+  lineName?: string;
   routeId: string;
   vehicleId?: string;
   scheduled?: string;

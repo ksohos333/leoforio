@@ -125,6 +125,13 @@ func (c *Client) list(ctx context.Context, act string, params []string) ([]objec
 
 	var items []object
 	if err := decode(body, &items); err != nil {
+		// The upstream answers with an empty string when a query has no
+		// results, rather than with an empty array. That is a valid answer,
+		// not a failure.
+		var text string
+		if decodeErr := decode(body, &text); decodeErr == nil && strings.TrimSpace(text) == "" {
+			return nil, nil
+		}
 		if message, ok := upstreamError(body); ok {
 			return nil, fmt.Errorf("%w: %s", ErrUpstreamError, message)
 		}
