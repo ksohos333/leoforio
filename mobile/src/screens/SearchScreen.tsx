@@ -52,9 +52,7 @@ export function SearchScreen({ onSelect }: SearchScreenProps) {
       );
       setNearby(stops);
     } catch (error) {
-      setLocationError(
-        error instanceof Error ? error.message : 'The location is unavailable.',
-      );
+      setLocationError(locationErrorMessage(error));
     }
   };
 
@@ -126,6 +124,27 @@ export function SearchScreen({ onSelect }: SearchScreenProps) {
       />
     </View>
   );
+}
+
+/**
+ * Turns a location failure into something a person can act on.
+ *
+ * The raw messages are written for developers: "Location request timed out"
+ * says nothing about what to do next.
+ */
+function locationErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : '';
+
+  if (message.includes('timed out')) {
+    return 'This device could not get a location in time. Search for your stop by name instead.';
+  }
+  if (message.includes('provider')) {
+    return 'This device has no location provider available. Search for your stop by name instead.';
+  }
+  if (message.includes('denied') || message.includes('Permission')) {
+    return 'The location permission was not granted.';
+  }
+  return 'The location is unavailable. Search for your stop by name instead.';
 }
 
 function currentPosition(): Promise<{ coords: { latitude: number; longitude: number } }> {
