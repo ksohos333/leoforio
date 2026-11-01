@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { api } from '../api/client';
 import type { Route } from '../api/types';
@@ -11,6 +12,7 @@ interface LiveMapScreenProps {
 }
 
 export function LiveMapScreen({ route }: LiveMapScreenProps) {
+  const insets = useSafeAreaInsets();
   const vehicles = useQuery({
     queryKey: ['vehicles', route.id],
     queryFn: () => api.vehicles(route.id),
@@ -36,7 +38,7 @@ export function LiveMapScreen({ route }: LiveMapScreenProps) {
         vehicles={liveVehicles}
         stops={stops.data ?? []}
       />
-      <View style={styles.status}>
+      <View style={[styles.status, { bottom: insets.bottom + 16 }]}>
         {vehicles.isError ? (
           <Text style={styles.statusText}>
             Live positions are unavailable right now.
@@ -67,7 +69,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 16,
     right: 16,
-    bottom: 32,
     backgroundColor: 'rgba(255,255,255,0.94)',
     borderRadius: 12,
     paddingHorizontal: 14,
